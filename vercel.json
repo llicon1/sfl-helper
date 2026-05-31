@@ -1,13 +1,25 @@
 {
   "version": 2,
-  "rewrites": [
+  "functions": {
+    "api/[...path].js": {
+      "runtime": "nodejs20.x"
+    }
+  },
+  "routes": [
     {
       "source": "/api/:path*",
-      "destination": "/api/:path*"
+      "dest": "/api/[...path].js"
     },
     {
       "source": "/(.*)",
-      "destination": "/index.html"
+      "dest": "/$1"
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "source": "/.*",
+      "dest": "/index.html"
     }
   ],
   "headers": [
