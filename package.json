@@ -1,0 +1,14 @@
+{
+  "name": "sfl-market-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SFL Market companion app",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "check": "node --check script.js && node --check server.js && node --check api/[...path].js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

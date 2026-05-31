@@ -1,0 +1,55 @@
+{
+  "posts": [
+    {
+      "id": "1780250210763-e478f29f32224",
+      "farmId": "73382",
+      "nickname": "llicon1",
+      "need": "clean",
+      "message": "",
+      "visitUrl": "https://sunflower-land.com/play/#/visit/73382",
+      "avatar": "sfl-app-imagen/le%C3%B1ador.png",
+      "banner": "desert",
+      "bannerImage": "",
+      "island": "Desert Island",
+      "faction": "bumpkins 0 emblems",
+      "level": 51,
+      "visits": 0,
+      "cleanCount": 0,
+      "cleanedBy": [],
+      "likes": 0,
+      "likedBy": [],
+      "visitedBy": [],
+      "capacity": 6,
+      "createdAt": "2026-05-31T17:56:50.763Z"
+    },
+    {
+      "id": "1780207211555-9e5e81d305ec9",
+      "farmId": "6777707846793896",
+      "nickname": "HeatedLime",
+      "need": "clean",
+      "message": "asds",
+      "visitUrl": "https://sunflower-land.com/play/#/visit/6777707846793896",
+      "avatar": "sfl-app-imagen/farmer-H.png",
+      "banner": "night",
+      "bannerImage": "",
+      "island": "Volcano Island",
+      "faction": "nightshades 10102 emblems",
+      "level": 200,
+      "visits": 1,
+      "cleanCount": 1,
+      "cleanedBy": [
+        "farm:73382"
+      ],
+      "likes": 1,
+      "likedBy": [
+        "farm:73382"
+      ],
+      "capacity": 6,
+      "createdAt": "2026-05-31T06:00:11.555Z",
+      "updatedAt": "2026-05-31T17:56:22.114Z",
+      "visitedBy": [
+        "farm:73382"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SFL Market</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <section id="farmGate" class="farm-gate" aria-label="Conectar granja">
+    <div class="farm-gate-card">
+      <div class="brand gate-brand">
+        <div class="brand-mark">✹</div>
+        <div>
+          <h1>SFL Market</h1>
+          <p>Conecta tu granja para calcular con tus recursos.</p>
+        </div>
+      </div>
+
+      <label for="farmIdInput">Farm ID</label>
+      <div class="farm-id-row">
+        <input id="farmIdInput" type="text" inputmode="numeric" placeholder="Ej: 6777707846793896">
+        <button id="loadFarmBtn" type="button">Entrar</button>
+      </div>
+
+      <p id="farmGateStatus" class="gate-status">Puedes usar modo demo mientras conectamos la lectura real de datos.</p>
+
+      <div class="gate-actions">
+        <button id="demoFarmBtn" type="button">Usar demo</button>
+        <button id="clearFarmBtn" type="button">Cambiar ID</button>
+      </div>
+    </div>
+  </section>
+
+  <main class="phone-stage">
+    <section class="phone home-phone active-screen" data-screen="home" aria-label="Inicio">
+      <header class="app-header">
+        <div class="brand">
+          <div class="brand-mark">✹</div>
+          <div>
+            <h1>SFL Market</h1>
+            <p>Sunflower Land</p>
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <div class="flower-ticker">
+            <span>FLOWER</span>
+            <strong id="homeFlowerUsdPrice">$--</strong>
+          </div>
+          <button class="lang-btn" type="button" data-lang-toggle>ES</button>
+          <button class="icon-btn" type="button" aria-label="Notificaciones">!</button>
+        </div>
+      </header>
+
+      <section class="home-hero-card" aria-label="Resumen principal">
+        <span>Balance Flower</span>
+        <strong id="homeBalance">0.000 F</strong>
+        <p id="homeBalanceHint">Conecta tu granja para ver tu balance publico.</p>
+      </section>
+
+      <section class="farm-profile home-farm-card" aria-label="Granja conectada">
+        <div>
+          <span>Granja conectada</span>
+          <strong id="homeFarmName">Modo demo</strong>
+          <p id="homeFarmMeta">Agrega tu Farm ID al entrar.</p>
+          <p id="homeFarmStats" class="farm-profile-stats">Inventario editable</p>
+          <div id="homeFarmBalances" class="farm-profile-balances" aria-label="Balances de granja"></div>
+        </div>
+        <div class="farm-profile-actions">
+          <button type="button" data-view="farm">Ver perfil</button>
+          <button type="button" data-view="market">Market</button>
+        </div>
+      </section>
+
+      <section class="quick-stats home-stats" aria-label="Indicadores">
+        <div>
+          <span>Item mas caro</span>
+          <strong id="homeTopItem">-</strong>
+        </div>
+        <div>
+          <span>Mejor tendencia</span>
+          <strong id="homeBestTrend">-</strong>
+        </div>
+        <div>
+          <span>Items activos</span>
+          <strong id="homeActiveItems">0</strong>
+        </div>
+      </section>
+
+      <section class="watch-card home-summary-card">
+        <div>
+          <span>Resumen rapido</span>
+          <strong id="homeSummaryTitle">Compra inteligente</strong>
+          <p id="homeSummaryText">Marca cantidades en Market y compara tu balance antes de comprar.</p>
+        </div>
+        <button type="button" data-view="market">Ver market</button>
+      </section>
+
+      <nav class="bottom-nav" aria-label="Navegacion principal">
+        <button class="active" type="button" data-view="home">Inicio</button>
+        <button type="button" data-view="market">Market</button>
+        <button type="button" data-view="community">Comunidad</button>
+        <button type="button" data-view="farm">Mi Granja</button>
+        <button type="button" data-view="settings">Ajustes</button>
+        <button type="button" data-view="nfts">NFT</button>
+      </nav>
+    </section>
+
+    <section class="phone market-phone" data-screen="market" aria-label="SFL Market">
+      <header class="app-header">
+        <div class="brand">
+          <div class="brand-mark">✹</div>
+          <div>
+            <h1>SFL Market</h1>
+            <p>Sunflower Land</p>
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <div class="flower-ticker">
+            <span>FLOWER</span>
+            <strong id="flowerUsdPrice">$--</strong>
+          </div>
+          <button class="lang-btn" type="button" data-lang-toggle>ES</button>
+          <button class="icon-btn" type="button" aria-label="Notificaciones">!</button>
+        </div>
+      </header>
+
+      <section class="search-row" aria-label="Buscar y filtrar">
+        <label class="search-box" for="marketSearch">
+          <span>Buscar</span>
+          <input id="marketSearch" type="search" placeholder="Buscar producto...">
+        </label>
+        <button id="refreshBtn" class="filter-btn" type="button">Actualizar</button>
+      </section>
+
+      <section class="balance-card" aria-label="Balance personal">
+        <div>
+          <span>Tus FLOWER disponibles</span>
+          <label for="flowerBalance">Balance</label>
+        </div>
+        <input id="flowerBalance" type="number" min="0" step="0.001" value="0" inputmode="decimal">
+      </section>
+
+      <section class="farm-profile" aria-label="Perfil de granja">
+        <div>
+          <span>Granja conectada</span>
+          <strong id="farmProfileName">Modo demo</strong>
+          <p id="farmProfileMeta">Agrega tu Farm ID al entrar.</p>
+          <p id="farmProfileStats" class="farm-profile-stats">Inventario editable</p>
+          <div id="farmProfileBalances" class="farm-profile-balances" aria-label="Balances de granja"></div>
+        </div>
+        <div class="farm-profile-actions">
+          <button id="syncFarmBtn" type="button">Sync</button>
+          <button id="changeFarmBtn" type="button">Conectar</button>
+        </div>
+      </section>
+
+      <section class="quick-stats" aria-label="Indicadores">
+        <div>
+          <span>Item mas caro</span>
+          <strong id="topItem">-</strong>
+        </div>
+        <div>
+          <span>Mejor tendencia</span>
+          <strong id="bestTrend">-</strong>
+        </div>
+        <div>
+          <span>Items activos</span>
+          <strong id="activeItems">0</strong>
+        </div>
+      </section>
+
+      <section class="source-card">
+        <div>
+          <span>Fuente market</span>
+          <strong id="marketSource">SFL World fallback</strong>
+        </div>
+        <p id="marketStatus">Cargando precios reales...</p>
+      </section>
+
+      <section class="market-table" aria-label="Productos del market">
+        <div class="table-head">
+          <span>Producto</span>
+          <span>Precio</span>
+          <span>24h</span>
+          <span>Cant.</span>
+          <span>Total</span>
+        </div>
+        <div id="marketList" class="market-list"></div>
+      </section>
+
+      <section class="total-card" aria-label="Total del carrito">
+        <div>
+          <span>Total general</span>
+          <p id="cartGap">Agrega cantidades para calcular tu compra.</p>
+        </div>
+        <strong id="cartTotal">0.000 F</strong>
+      </section>
+
+      <section class="watch-card">
+        <div>
+          <span>Lista rapida</span>
+          <strong>Compra inteligente</strong>
+          <p>Marca cantidades en Market y compara tu balance antes de comprar.</p>
+        </div>
+        <button type="button" data-view="community">Pedir limpieza</button>
+      </section>
+
+      <nav class="bottom-nav" aria-label="Navegacion principal">
+        <button type="button" data-view="home">Inicio</button>
+        <button class="active" type="button" data-view="market">Market</button>
+        <button type="button" data-view="community">Comunidad</button>
+        <button type="button" data-view="farm">Mi Granja</button>
+        <button type="button" data-view="settings">Ajustes</button>
+        <button type="button" data-view="nfts">NFT</button>
+      </nav>
+
+      <footer class="sync-row">
+        <span class="live-dot"></span>
+        <span id="lastUpdated">Precios demo</span>
+      </footer>
+    </section>
+
+    <section class="phone farm-phone" data-screen="farm" aria-label="Mi granja">
+      <header class="upgrade-header">
+        <button class="back-btn" type="button" data-view="home" aria-label="Volver">‹</button>
+        <h2>Mi granja</h2>
+        <button class="lang-btn" type="button" data-lang-toggle>ES</button>
+      </header>
+
+      <section class="farm-hero">
+        <img id="farmHeroAvatar" src="sfl-app-imagen/farmer-H.png" alt="Avatar">
+        <div>
+          <span id="farmDashboardLabel">Farm ID</span>
+          <h3 id="farmDashboardName">Modo demo</h3>
+          <div class="profile-hero-actions">
+            <button id="changeAvatarBtn" class="profile-secondary-action" type="button">Cambiar avatar</button>
+            <button id="changeBannerBtn" class="profile-secondary-action" type="button">Cambiar banner</button>
+          </div>
+          <p id="farmDashboardMeta">Conecta tu granja para ver datos públicos.</p>
+        </div>
+        <button id="farmDashboardSync" type="button">Sync</button>
+      </section>
+
+      <section class="farm-balance-grid" id="farmBalanceGrid" aria-label="Balances"></section>
+
+      <section class="farm-panel farm-profile-preview">
+        <div class="panel-title">
+          <h3 id="farmProfileTitle">Perfil publico</h3>
+          <span id="farmProfileBadge">Local</span>
+        </div>
+        <p id="profileBioPreview">Vista previa del perfil publico.</p>
+        <button id="editProfileBtn" type="button">Editar perfil</button>
+        <div id="profileStatus">Se usa al publicar en Comunidad.</div>
+      </section>
+
+      <section class="farm-panel farm-activity-panel">
+        <div class="panel-title">
+          <h3 id="farmActivityTitle">Actividad</h3>
+          <span id="farmActivityBadge">Social</span>
+        </div>
+        <div id="farmActivityGrid" class="farm-activity-grid"></div>
+      </section>
+
+      <section id="profileModal" class="profile-modal hidden" aria-label="Editar perfil">
+        <div class="profile-modal-card farm-profile-editor">
+        <div class="panel-title">
+          <h3 id="profileModalTitle">Editar perfil</h3>
+          <button id="closeProfileModal" type="button" aria-label="Cerrar">x</button>
+        </div>
+        <label for="profileDisplayName" id="profileDisplayNameLabel">Nombre para comunidad</label>
+        <input id="profileDisplayName" type="text" maxlength="32" placeholder="Tu nombre publico">
+        <textarea id="profileBio" maxlength="120" rows="2" placeholder="Mensaje corto para tu perfil"></textarea>
+        <input id="profileBannerUpload" type="file" accept="image/*">
+        <button id="saveProfileBtn" type="button">Guardar perfil</button>
+        </div>
+      </section>
+
+      <section id="avatarModal" class="avatar-modal hidden" aria-label="Cambiar avatar">
+        <div class="avatar-modal-card">
+          <div class="panel-title">
+            <h3 id="profileAvatarLabel">Cambiar avatar</h3>
+            <button id="closeAvatarModal" type="button" aria-label="Cerrar">x</button>
+          </div>
+          <div id="profileAvatarPicker" class="profile-avatar-picker"></div>
+        </div>
+      </section>
+
+      <section class="farm-panel">
+        <div class="panel-title">
+          <h3 id="farmAnimalsTitle">Despertar de animales</h3>
+          <span id="farmAnimalCount">0</span>
+        </div>
+        <div id="farmAnimalList" class="farm-animal-list"></div>
+      </section>
+
+      <section class="farm-note">
+        <strong id="farmNoteTitle">Datos conectados</strong>
+        <p id="farmNoteText">Usamos lo que SFL World muestra públicamente por Farm ID. El inventario privado seguirá editable si el juego no lo expone.</p>
+      </section>
+
+      <nav class="bottom-nav" aria-label="Navegacion principal">
+        <button type="button" data-view="home">Inicio</button>
+        <button type="button" data-view="market">Market</button>
+        <button type="button" data-view="community">Comunidad</button>
+        <button class="active" type="button" data-view="farm">Mi Granja</button>
+        <button type="button" data-view="settings">Ajustes</button>
+        <button type="button" data-view="nfts">NFT</button>
+      </nav>
+    </section>
+
+    <section class="phone community-phone" data-screen="community" aria-label="Comunidad">
+      <header class="upgrade-header">
+        <button class="back-btn" type="button" data-view="home" aria-label="Volver">‹</button>
+        <h2>Comunidad</h2>
+        <button class="lang-btn" type="button" data-lang-toggle>ES</button>
+      </header>
+
+      <section class="community-hero">
+        <div>
+          <span id="communityKicker">Tablon de granjas</span>
+          <h3 id="communityTitle">Publica tu Farm ID</h3>
+          <p id="communitySubtitle">Otros granjeros podran visitar tu granja y ayudarte a limpiar.</p>
+        </div>
+        <button id="useMyFarmBtn" type="button">Usar mi ID</button>
+      </section>
+
+      <section id="ownCommunityPost" class="own-community-post hidden"></section>
+
+      <button id="openPostModalBtn" class="community-composer-trigger" type="button">
+        <img id="communityComposerAvatar" src="sfl-app-imagen/farmer-H.png" alt="Avatar">
+        <span id="communityComposerText">¿Qué necesitas hoy?</span>
+      </button>
+
+      <form id="communityForm" class="community-form community-publish-modal hidden">
+        <div class="community-modal-card">
+        <div class="panel-title">
+          <h3 id="communityModalTitle">Nueva publicación</h3>
+          <button id="closePostModalBtn" type="button" aria-label="Cerrar">x</button>
+        </div>
+        <div id="communityConnectedFarm" class="community-connected">
+          <span>Tu publicacion usara automaticamente la granja conectada</span>
+          <strong id="communityConnectedName">Sin granja conectada</strong>
+        </div>
+
+        <label class="community-hidden-field" for="communityFarmId">Farm ID</label>
+        <input class="community-hidden-field" id="communityFarmId" type="text" inputmode="numeric" placeholder="Ej: 6777707846793896">
+
+        <label class="community-hidden-field" for="communityName">Nombre</label>
+        <input class="community-hidden-field" id="communityName" type="text" maxlength="32" placeholder="Tu nombre o granja">
+
+        <label class="community-hidden-field" for="communityNeed">Necesito</label>
+        <select class="community-hidden-field" id="communityNeed">
+          <option value="clean">Limpieza / ayuda</option>
+          <option value="visit">Visitas</option>
+          <option value="trade">Intercambio</option>
+          <option value="tips">Consejos</option>
+        </select>
+
+        <label for="communityMessage">Mensaje</label>
+        <textarea id="communityMessage" maxlength="180" rows="3" placeholder="Ej: tengo la granja sucia, gracias por visitar :)"></textarea>
+
+        <button id="publishCommunityBtn" type="submit">Publicar</button>
+        <p id="communityStatus">Las publicaciones se guardan en este servidor local.</p>
+        </div>
+      </form>
+
+      <section class="community-panel">
+        <div class="panel-title">
+          <h3 id="communityListTitle">Granjas publicadas</h3>
+          <button id="refreshCommunityBtn" type="button">Actualizar</button>
+        </div>
+        <div id="communityList" class="community-list"></div>
+      </section>
+
+      <section id="publicProfileModal" class="public-profile-modal hidden" aria-label="Perfil publico">
+        <div id="publicProfileCard" class="public-profile-card">
+          <button id="closePublicProfile" class="public-profile-close" type="button" aria-label="Cerrar">x</button>
+          <div id="publicProfileBanner" class="public-profile-banner">
+            <img id="publicProfileAvatar" src="sfl-app-imagen/farmer-H.png" alt="Avatar">
+          </div>
+          <div class="public-profile-body">
+            <h3 id="publicProfileName">Farm</h3>
+            <p id="publicProfileMeta">Farm ID</p>
+            <div id="publicProfileMessage" class="public-profile-message"></div>
+            <div class="public-profile-stats">
+              <article>
+                <span>Likes</span>
+                <strong id="publicProfileLikes">0</strong>
+              </article>
+              <article>
+                <span>Limpiezas</span>
+                <strong id="publicProfileCleans">0/6</strong>
+              </article>
+            </div>
+            <a id="publicProfileVisit" class="visit-farm-btn" href="#" target="_blank" rel="noreferrer">Visitar granja</a>
+          </div>
+        </div>
+      </section>
+
+      <nav class="bottom-nav" aria-label="Navegacion principal">
+        <button type="button" data-view="home">Inicio</button>
+        <button type="button" data-view="market">Market</button>
+        <button class="active" type="button" data-view="community">Comunidad</button>
+        <button type="button" data-view="farm">Mi Granja</button>
+        <button type="button" data-view="settings">Ajustes</button>
+        <button type="button" data-view="nfts">NFT</button>
+      </nav>
+    </section>
+
+    <section class="phone nfts-phone" data-screen="nfts" aria-label="NFTs">
+      <header class="upgrade-header">
+        <button class="back-btn" type="button" data-view="home" aria-label="Volver">‹</button>
+        <h2>NFTs</h2>
+        <button class="lang-btn" type="button" data-lang-toggle>ES</button>
+      </header>
+
+      <section class="utility-hero">
+        <div>
+          <span id="nftKicker">Colecciones</span>
+          <h3 id="nftTitle">Accesos rapidos</h3>
+          <p id="nftSubtitle">Abre las paginas utiles para revisar tierras, buds y wearables.</p>
+        </div>
+        <button id="refreshNftBtn" type="button">Actualizar</button>
+      </section>
+
+      <section class="nft-tools">
+        <label class="search-box" for="nftSearch">
+          <span>Buscar</span>
+          <input id="nftSearch" type="search" placeholder="Buscar NFT...">
+        </label>
+        <select id="nftTypeFilter">
+          <option value="effects">Con efecto</option>
+          <option value="all">Todos</option>
+          <option value="collectible">Collectibles</option>
+          <option value="wearable">Wearables</option>
+        </select>
+      </section>
+
+      <section class="source-card">
+        <div>
+          <span>Fuente NFT</span>
+          <strong id="nftSource">SFL World</strong>
+        </div>
+        <p id="nftStatus">Cargando NFTs del market...</p>
+      </section>
+
+      <section class="nft-market-list" id="nftMarketList"></section>
+
+      <nav class="bottom-nav" aria-label="Navegacion principal">
+        <button type="button" data-view="home">Inicio</button>
+        <button type="button" data-view="market">Market</button>
+        <button type="button" data-view="community">Comunidad</button>
+        <button type="button" data-view="farm">Mi Granja</button>
+        <button type="button" data-view="settings">Ajustes</button>
+        <button class="active" type="button" data-view="nfts">NFT</button>
+      </nav>
+    </section>
+
+    <section class="phone settings-phone" data-screen="settings" aria-label="Ajustes">
+      <header class="upgrade-header">
+        <button class="back-btn" type="button" data-view="home" aria-label="Volver">‹</button>
+        <h2>Ajustes</h2>
+        <button class="lang-btn" type="button" data-lang-toggle>ES</button>
+      </header>
+
+      <section class="utility-hero">
+        <div>
+          <span id="settingsKicker">Preferencias</span>
+          <h3 id="settingsTitle">Control de la app</h3>
+          <p id="settingsSubtitle">Cambia idioma, sesion y datos locales.</p>
+        </div>
+      </section>
+
+      <section class="settings-list">
+        <button id="settingsLanguageBtn" type="button">Cambiar idioma</button>
+        <button id="settingsConnectBtn" type="button">Conectar otra granja</button>
+        <button id="settingsClearFarmBtn" type="button">Borrar granja guardada</button>
+        <button id="settingsRefreshBtn" type="button">Actualizar precios</button>
+      </section>
+
+      <p id="settingsStatus" class="settings-status">Listo.</p>
+
+      <nav class="bottom-nav" aria-label="Navegacion principal">
+        <button type="button" data-view="home">Inicio</button>
+        <button type="button" data-view="market">Market</button>
+        <button type="button" data-view="community">Comunidad</button>
+        <button type="button" data-view="farm">Mi Granja</button>
+        <button class="active" type="button" data-view="settings">Ajustes</button>
+        <button type="button" data-view="nfts">NFT</button>
+      </nav>
+    </section>
+
+    <section class="phone upgrade-phone" data-screen="upgrades" aria-label="Calculadora de upgrades">
+      <header class="upgrade-header">
+        <button class="back-btn" type="button" data-view="home" aria-label="Volver">‹</button>
+        <h2>Upgrades</h2>
+        <button class="lang-btn" type="button" data-lang-toggle>ES</button>
+      </header>
+
+      <section class="upgrade-hero">
+        <img src="https://cdn-icons-png.flaticon.com/512/1998/1998627.png" alt="Hen House">
+        <div>
+          <p class="upgrade-kicker">Mejora de nivel</p>
+          <h3>Hen House</h3>
+          <label class="select-label" for="buildingSelect">Objetivo</label>
+          <select id="buildingSelect"></select>
+        </div>
+      </section>
+
+      <section class="stat-grid" aria-label="Datos del upgrade">
+        <div>
+          <span>Tiempo</span>
+          <strong id="buildTime">1h 00m</strong>
+        </div>
+        <div>
+          <span>Experiencia</span>
+          <strong id="buildXp">+50 XP</strong>
+        </div>
+      </section>
+
+      <section class="materials-card" aria-labelledby="materialsTitle">
+        <h3 id="materialsTitle">Materiales necesarios</h3>
+        <div class="materials-head">
+          <span>Material</span>
+          <span>Necesitas</span>
+          <span>Tienes</span>
+          <span>Falta</span>
+          <span>Precio</span>
+          <span>Total</span>
+        </div>
+        <div id="recipeBreakdown" class="recipe-breakdown"></div>
+      </section>
+
+      <section class="upgrade-total">
+        <div>
+          <span>Total si compras todo</span>
+          <strong id="goalTotal">0.000 FLOWER</strong>
+        </div>
+        <div class="missing-buy-row">
+          <span>Comprar faltantes</span>
+          <strong id="missingTotal">0.000 FLOWER</strong>
+        </div>
+        <p id="goalGap">Selecciona una estructura para ver cuánto falta.</p>
+      </section>
+
+      <div class="upgrade-actions">
+        <button type="button" class="outline-btn">Ver en Market</button>
+        <button type="button" class="solid-btn">Agregar</button>
+      </div>
+
+      <section class="chart-card" aria-label="Evolucion del costo">
+        <div class="chart-title">
+          <h3>Evolucion del costo total</h3>
+          <div>
+            <button type="button">1H</button>
+            <button class="active" type="button">24H</button>
+            <button type="button">7D</button>
+          </div>
+        </div>
+        <div class="big-chart">
+          <span></span><span></span><span></span><span></span><span></span>
+        </div>
+      </section>
+
+      <aside class="tip-card">
+        <div>
+          <strong>Consejo</strong>
+          <p>El costo total bajo 2.35% en las ultimas 24h. Buen momento para construir.</p>
+        </div>
+        <div class="farmer">✹</div>
+      </aside>
+
+      <nav class="bottom-nav" aria-label="Navegacion principal">
+        <button type="button" data-view="home">Inicio</button>
+        <button type="button" data-view="market">Market</button>
+        <button type="button" data-view="community">Comunidad</button>
+        <button type="button" data-view="farm">Mi Granja</button>
+        <button type="button" data-view="settings">Ajustes</button>
+        <button type="button" data-view="nfts">NFT</button>
+      </nav>
+    </section>
+  </main>
+
+  <section id="assetDetailPanel" class="asset-detail hidden" aria-label="Detalle de precio">
+    <div class="asset-detail-card">
+      <header>
+        <div>
+          <span id="assetDetailType">Market</span>
+          <h3 id="assetDetailTitle">Item</h3>
+        </div>
+        <button id="closeAssetDetail" type="button" aria-label="Cerrar">×</button>
+      </header>
+      <div class="asset-detail-body">
+        <img id="assetDetailImage" src="" alt="">
+        <div>
+          <strong id="assetDetailPrice">0 FLOWER</strong>
+          <p id="assetDetailMeta">Precio actual</p>
+        </div>
+      </div>
+      <div id="assetDetailChart" class="asset-detail-chart"></div>
+      <div class="asset-detail-range">
+        <span>24h</span>
+        <small id="assetChartHint">Pasa el mouse por los puntos para ver precio.</small>
+      </div>
+      <div class="asset-alert-actions">
+        <a id="assetMarketLink" href="#" target="_blank" rel="noreferrer">Ver en market</a>
+        <button id="alertUpBtn" type="button" data-alert-direction="up">Avisar si sube</button>
+        <button id="alertDownBtn" type="button" data-alert-direction="down">Avisar si baja</button>
+      </div>
+      <p id="assetAlertStatus">Selecciona una alerta para este precio.</p>
+    </div>
+  </section>
+
+  <script src="script.js?v=20260531-stable1"></script>
+</body>
+</html>
