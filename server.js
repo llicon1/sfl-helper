@@ -752,10 +752,11 @@ async function handleRequest(req, res) {
 
 const server = http.createServer(handleRequest);
 
-if (require.main === module) {
+if (require.main === module && !process.env.VERCEL) {
   server.listen(PORT, "127.0.0.1", () => {
     console.log(`SFL Market running at http://127.0.0.1:${PORT}`);
   });
 }
 
-module.exports = { handleRequest };
+module.exports = handleRequest;
+module.exports.handleRequest = handleRequest;
