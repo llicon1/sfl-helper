@@ -11,6 +11,8 @@ const SFL_WORLD_TRADE_CSV_URL = "https://sfl.world/api/v1/trade/csv";
 const FLOWER_COINGECKO_ID = "flower-2";
 const SUPABASE_URL = (process.env.SUPABASE_URL || "").replace(/\/$/, "");
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || "";
+const COMMUNITY_RESET_TIME_ZONE = "America/Santiago";
+const COMMUNITY_RESET_HOUR = 20;
 const COMMUNITY_SEED_FILE = path.join(ROOT, "community-posts.json");
 const COMMUNITY_FILE = process.env.VERCEL
   ? path.join(os.tmpdir(), "sfl-market-community-posts.json")
@@ -309,25 +311,121 @@ async function supabaseCount(pathname) {
   return Number.isFinite(total) ? total : 0;
 }
 
+function getTimeZoneOffsetMs(date, timeZone) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23"
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  const asUtc = Date.UTC(
+    Number(values.year),
+    Number(values.month) - 1,
+    Number(values.day),
+    Number(values.hour),
+    Number(values.minute),
+    Number(values.second)
+  );
+  return asUtc - date.getTime();
+}
+
+function zonedDateTimeToUtc({ year, month, day, hour, minute = 0, second = 0 }, timeZone) {
+  const utcGuess = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
+  const offset = getTimeZoneOffsetMs(utcGuess, timeZone);
+  return new Date(utcGuess.getTime() - offset);
+}
+
+function getCommunityResetCutoff(now = new Date()) {
+  const localParts = new Intl.DateTimeFormat("en-US", {
+    timeZone: COMMUNITY_RESET_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    hourCycle: "h23"
+  }).formatToParts(now);
+  const localValues = Object.fromEntries(localParts.map((part) => [part.type, part.value]));
+  const localHour = Number(localValues.hour) % 24;
+  const localMidday = zonedDateTimeToUtc({
+    year: Number(localValues.year),
+    month: Number(localValues.month),
+    day: Number(localValues.day),
+    hour: 12
+  }, COMMUNITY_RESET_TIME_ZONE);
+
+  if (localHour < COMMUNITY_RESET_HOUR) {
+    localMidday.setUTCDate(localMidday.getUTCDate() - 1);
+  }
+
+  const cutoffParts = new Intl.DateTimeFormat("en-US", {
+    timeZone: COMMUNITY_RESET_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(localMidday);
+  const cutoffValues = Object.fromEntries(cutoffParts.map((part) => [part.type, part.value]));
+
+  return zonedDateTimeToUtc({
+    year: Number(cutoffValues.year),
+    month: Number(cutoffValues.month),
+    day: Number(cutoffValues.day),
+    hour: COMMUNITY_RESET_HOUR
+  }, COMMUNITY_RESET_TIME_ZONE);
+}
+
+async function cleanupCommunityPostsStore() {
+  const cutoff = getCommunityResetCutoff();
+
+  if (!isSupabaseEnabled()) {
+    const posts = readCommunityPosts();
+    const activePosts = posts.filter((post) => {
+      const createdAt = new Date(post.createdAt || 0).getTime();
+      return Number.isFinite(createdAt) && createdAt >= cutoff.getTime();
+    });
+    if (activePosts.length !== posts.length) writeCommunityPosts(activePosts);
+    return activePosts;
+  }
+
+  await supabaseRequest(`community_posts?created_at=lt.${encodeURIComponent(cutoff.toISOString())}`, {
+    method: "DELETE"
+  });
+  return null;
+}
+
 async function readCommunityPostsStore() {
+  await cleanupCommunityPostsStore();
   if (!isSupabaseEnabled()) return readCommunityPosts();
   const rows = await supabaseRequest("community_posts?select=*&order=created_at.desc&limit=80");
   return Array.isArray(rows) ? rows.map(dbToPost) : [];
 }
 
 async function writeCommunityPostsStore(posts) {
+  const cutoff = getCommunityResetCutoff().getTime();
+  const activePosts = posts.filter((post) => {
+    const createdAt = new Date(post.createdAt || 0).getTime();
+    return Number.isFinite(createdAt) && createdAt >= cutoff;
+  });
+
   if (!isSupabaseEnabled()) {
-    writeCommunityPosts(posts);
-    return posts;
+    writeCommunityPosts(activePosts);
+    return activePosts;
   }
 
-  const rows = posts.map(postToDb);
+  await cleanupCommunityPostsStore();
+  const rows = activePosts.map(postToDb);
+  if (!rows.length) return activePosts;
+
   const result = await supabaseRequest("community_posts?on_conflict=farm_id", {
     method: "POST",
     headers: { Prefer: "resolution=merge-duplicates,return=representation" },
     body: JSON.stringify(rows)
   });
-  return Array.isArray(result) ? result.map(dbToPost) : posts;
+  return Array.isArray(result) ? result.map(dbToPost) : activePosts;
 }
 
 async function deleteCommunityPostStore(postId, farmId) {
