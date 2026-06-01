@@ -13,6 +13,7 @@ const COMMUNITY_SEED_FILE = path.join(ROOT, "community-posts.json");
 const COMMUNITY_FILE = process.env.VERCEL
   ? path.join(os.tmpdir(), "sfl-market-community-posts.json")
   : COMMUNITY_SEED_FILE;
+let nftCache = null;
 
 const mimeTypes = {
   ".html": "text/html; charset=utf-8",
@@ -547,6 +548,18 @@ function slugify(value = "") {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 
+function readNftCache() {
+  if (!nftCache) {
+    nftCache = require("./nft-cache.json");
+  }
+
+  return {
+    source: `${nftCache.source || "SFL World NFT market"} cache`,
+    updatedAt: nftCache.updatedAt || nftCache.cachedAt || new Date(0).toISOString(),
+    items: Array.isArray(nftCache.items) ? nftCache.items : []
+  };
+}
+
 function parseStockRows(html) {
   const rows = html.match(/<tr onclick="toggleSource[\s\S]*?<\/tr>/g) || [];
   const stock = {};
@@ -622,32 +635,36 @@ async function handleFarm(req, res) {
 }
 
 async function handleNfts(res) {
-  const [collectiblesResponse, wearablesResponse] = await Promise.all([
-    fetch("https://sfl.world/nft/land", { headers: { "Cache-Control": "no-cache" } }),
-    fetch("https://sfl.world/nft/bumpkin", { headers: { "Cache-Control": "no-cache" } })
-  ]);
+  try {
+    const [collectiblesResponse, wearablesResponse] = await Promise.all([
+      fetch("https://sfl.world/nft/land", { headers: { "Cache-Control": "no-cache" } }),
+      fetch("https://sfl.world/nft/bumpkin", { headers: { "Cache-Control": "no-cache" } })
+    ]);
 
-  if (!collectiblesResponse.ok) throw new Error(`SFL World collectibles HTTP ${collectiblesResponse.status}`);
-  if (!wearablesResponse.ok) throw new Error(`SFL World wearables HTTP ${wearablesResponse.status}`);
+    if (!collectiblesResponse.ok) throw new Error(`SFL World collectibles HTTP ${collectiblesResponse.status}`);
+    if (!wearablesResponse.ok) throw new Error(`SFL World wearables HTTP ${wearablesResponse.status}`);
 
-  const [collectiblesHtml, wearablesHtml] = await Promise.all([
-    collectiblesResponse.text(),
-    wearablesResponse.text()
-  ]);
+    const [collectiblesHtml, wearablesHtml] = await Promise.all([
+      collectiblesResponse.text(),
+      wearablesResponse.text()
+    ]);
 
-  const items = [
-    ...parseNftCards(collectiblesHtml, "collectible"),
-    ...parseNftCards(wearablesHtml, "wearable")
-  ].filter((item) => Number.isFinite(item.flower) || Number.isFinite(item.usd));
+    const items = [
+      ...parseNftCards(collectiblesHtml, "collectible"),
+      ...parseNftCards(wearablesHtml, "wearable")
+    ].filter((item) => Number.isFinite(item.flower) || Number.isFinite(item.usd));
 
-  send(res, 200, JSON.stringify({
-    source: "SFL World NFT market",
-    updatedAt: new Date().toISOString(),
-    items: items.sort((a, b) => {
-      if (a.hasEffect !== b.hasEffect) return a.hasEffect ? -1 : 1;
-      return (a.flower || Infinity) - (b.flower || Infinity);
-    })
-  }));
+    send(res, 200, JSON.stringify({
+      source: "SFL World NFT market",
+      updatedAt: new Date().toISOString(),
+      items: items.sort((a, b) => {
+        if (a.hasEffect !== b.hasEffect) return a.hasEffect ? -1 : 1;
+        return (a.flower || Infinity) - (b.flower || Infinity);
+      })
+    }));
+  } catch {
+    send(res, 200, JSON.stringify(readNftCache()));
+  }
 }
 
 async function handleMarket(res) {
