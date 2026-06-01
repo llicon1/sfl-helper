@@ -53,12 +53,68 @@ const hiddenMarketNames = new Set([
   "crimson baitfish"
 ]);
 
+const visibleMarketNames = new Set([
+  "wood",
+  "stone",
+  "iron",
+  "gold",
+  "crimstone",
+  "egg",
+  "pumpkin",
+  "wheat",
+  "carrot",
+  "milk",
+  "salt",
+  "honey",
+  "leather",
+  "wool",
+  "merino wool",
+  "feather",
+  "tomato",
+  "potato",
+  "rhubarb",
+  "zucchini",
+  "yam",
+  "cabbage",
+  "broccoli",
+  "soybean",
+  "beetroot",
+  "pepper",
+  "cauliflower",
+  "parsnip",
+  "eggplant",
+  "corn",
+  "onion",
+  "radish",
+  "turnip",
+  "kale",
+  "artichoke",
+  "barley",
+  "apple",
+  "banana",
+  "blueberry",
+  "lemon",
+  "orange",
+  "grape",
+  "rice",
+  "olive",
+  "duskberry",
+  "lunara",
+  "celestine",
+  "goblin emblem",
+  "bumpkin emblem",
+  "sunflorian emblem",
+  "nightshade emblem"
+]);
+
 function isHiddenMarketName(name = "") {
   return hiddenMarketNames.has(getMarketKey(name));
 }
 
 function isVisibleMarketItem(item) {
-  return !isHiddenMarketName(item?.marketName || item?.name || item?.esName || "");
+  const name = item?.marketName || item?.name || item?.esName || "";
+  const key = getMarketKey(name);
+  return visibleMarketNames.has(key) && !hiddenMarketNames.has(key);
 }
 
 const marketItems = [
@@ -493,19 +549,7 @@ for (let index = marketItems.length - 1; index >= 0; index -= 1) {
 }
 
 const allowedApiMarketNames = new Set([
-  ...marketItems.map((item) => getMarketKey(item.marketName || item.name)),
-  "ruffroot",
-  "chewed bone",
-  "heart leaf",
-  "moonfur",
-  "ribbon",
-  "wild grass",
-  "celestine",
-  "lunara",
-  "goblin emblem",
-  "bumpkin emblem",
-  "sunflorian emblem",
-  "nightshade emblem"
+  ...visibleMarketNames
 ]);
 
 const profileAvatars = [
@@ -1060,7 +1104,7 @@ async function loadRealMarketPrices() {
       const existing = findMarketItemByName(update.marketName || update.name);
       const spark = Array.isArray(update.spark) && update.spark.length > 1
         ? update.spark
-        : scaleSparkToPrice(existing?.spark, update.price);
+        : [];
       const finalSpark = spark.length > 1 ? spark : [];
       const trend = Number.isFinite(update.trend)
         ? update.trend
@@ -2426,9 +2470,13 @@ async function syncConnectedFarm() {
 }
 
 function getSparkline(item) {
-  const values = Array.isArray(item.spark) && item.spark.length > 1
-    ? item.spark
-    : [item.price || 0, item.price || 0];
+  if (!Number.isFinite(item.trend)) {
+    return `<span class="live-price-mark">${t("Actual", "Live")}</span>`;
+  }
+  const values = Array.isArray(item.spark) && item.spark.length > 1 ? item.spark : [];
+  if (values.length < 2) {
+    return `<span class="live-price-mark">${t("Actual", "Live")}</span>`;
+  }
   const points = sparklinePoints(values, 56, 48, 42, 30, 9);
 
   return `<svg viewBox="0 0 56 48" aria-hidden="true"><polyline points="${points}"></polyline></svg>`;
@@ -2655,7 +2703,7 @@ function renderMarket() {
       const subtotal = (state.quantities[item.id] || 0) * item.price;
       const hasTrend = Number.isFinite(item.trend) && Array.isArray(item.spark) && item.spark.length > 1;
       const trendClass = hasTrend ? (item.trend >= 0 ? "up" : "down") : "flat";
-      const trendLabel = hasTrend ? `${item.trend >= 0 ? "+" : ""}${item.trend.toFixed(2)}%` : t("Actual", "Live");
+      const trendLabel = hasTrend ? `${item.trend >= 0 ? "+" : ""}${item.trend.toFixed(2)}%` : "";
       const isFavorite = state.favorites.has(item.id);
       const card = document.createElement("article");
       card.className = "market-row compact-market-row";
