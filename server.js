@@ -16,6 +16,9 @@ const COMMUNITY_FILE = process.env.VERCEL
 const PROFILE_FILE = process.env.VERCEL
   ? path.join(os.tmpdir(), "sfl-market-farm-profiles.json")
   : path.join(ROOT, "farm-profiles.json");
+const ANALYTICS_FILE = process.env.VERCEL
+  ? path.join(os.tmpdir(), "sfl-market-app-visits.json")
+  : path.join(ROOT, "app-visits.json");
 let nftCache = null;
 
 const mimeTypes = {
@@ -216,7 +219,29 @@ async function supabaseRequest(pathname, options = {}) {
   }
 
   if (response.status === 204) return null;
-  return response.json();
+  const text = await response.text();
+  return text ? JSON.parse(text) : null;
+}
+
+async function supabaseCount(pathname) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/${pathname}`, {
+    method: "GET",
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      Prefer: "count=exact",
+      Range: "0-0"
+    }
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Supabase HTTP ${response.status}: ${text}`);
+  }
+
+  const range = response.headers.get("content-range") || "";
+  const total = Number(range.split("/").pop());
+  return Number.isFinite(total) ? total : 0;
 }
 
 async function readCommunityPostsStore() {
@@ -328,6 +353,93 @@ async function handleFarmProfile(req, res) {
   }
 
   send(res, 200, JSON.stringify({ profile: await writeFarmProfileStore(profile) }));
+}
+
+function todayKey() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function readLocalVisits() {
+  try {
+    const data = JSON.parse(fs.readFileSync(ANALYTICS_FILE, "utf8"));
+    return Array.isArray(data.visits) ? data.visits : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeLocalVisits(visits) {
+  fs.writeFileSync(ANALYTICS_FILE, `${JSON.stringify({ visits }, null, 2)}\n`);
+}
+
+async function readVisitCounts() {
+  const today = todayKey();
+  if (!isSupabaseEnabled()) {
+    const visits = readLocalVisits();
+    return {
+      today: visits.filter((visit) => visit.visitDate === today).length,
+      total: visits.length
+    };
+  }
+
+  const [todayCount, totalCount] = await Promise.all([
+    supabaseCount(`app_visits?select=id&visit_date=eq.${today}`),
+    supabaseCount("app_visits?select=id")
+  ]);
+
+  return { today: todayCount, total: totalCount };
+}
+
+async function recordAppVisit(visitorId, userAgent = "") {
+  const cleanedVisitorId = cleanText(visitorId, 80);
+  if (!cleanedVisitorId) return readVisitCounts();
+
+  const today = todayKey();
+  const visit = {
+    id: `${today}:${cleanedVisitorId}`,
+    visitor_id: cleanedVisitorId,
+    visit_date: today,
+    user_agent: cleanText(userAgent, 180),
+    created_at: new Date().toISOString()
+  };
+
+  if (!isSupabaseEnabled()) {
+    const visits = readLocalVisits();
+    if (!visits.some((entry) => entry.id === visit.id)) {
+      visits.push({
+        id: visit.id,
+        visitorId: cleanedVisitorId,
+        visitDate: today,
+        userAgent: visit.user_agent,
+        createdAt: visit.created_at
+      });
+      writeLocalVisits(visits.slice(-5000));
+    }
+    return readVisitCounts();
+  }
+
+  await supabaseRequest("app_visits?on_conflict=id", {
+    method: "POST",
+    headers: { Prefer: "resolution=ignore-duplicates" },
+    body: JSON.stringify(visit)
+  });
+  return readVisitCounts();
+}
+
+async function handleAnalytics(req, res) {
+  if (req.method === "GET") {
+    send(res, 200, JSON.stringify(await readVisitCounts()));
+    return;
+  }
+
+  if (req.method !== "POST") {
+    send(res, 405, JSON.stringify({ error: "Method not allowed" }));
+    return;
+  }
+
+  const payload = await readJsonBody(req);
+  const counts = await recordAppVisit(payload.visitorId, req.headers["user-agent"] || "");
+  send(res, 200, JSON.stringify(counts));
 }
 
 async function handleCommunity(req, res) {
@@ -845,6 +957,11 @@ async function handleRequest(req, res) {
 
     if (req.url.startsWith("/api/nfts")) {
       await handleNfts(res);
+      return;
+    }
+
+    if (req.url.startsWith("/api/analytics")) {
+      await handleAnalytics(req, res);
       return;
     }
 

@@ -645,6 +645,11 @@ const settingsConnectBtn = document.querySelector("#settingsConnectBtn");
 const settingsClearFarmBtn = document.querySelector("#settingsClearFarmBtn");
 const settingsRefreshBtn = document.querySelector("#settingsRefreshBtn");
 const settingsStatus = document.querySelector("#settingsStatus");
+const appVisitsLabel = document.querySelector("#appVisitsLabel");
+const appVisitsToday = document.querySelector("#appVisitsToday");
+const appVisitsTodayLabel = document.querySelector("#appVisitsTodayLabel");
+const appVisitsTotal = document.querySelector("#appVisitsTotal");
+const appVisitsTotalLabel = document.querySelector("#appVisitsTotalLabel");
 const viewMarketBtn = document.querySelector(".outline-btn");
 const addMissingBtn = document.querySelector(".solid-btn");
 const chartRangeButtons = document.querySelectorAll(".chart-title button");
@@ -1291,6 +1296,35 @@ function getCommunityClientId() {
     localStorage.setItem("sflCommunityClientId", clientId);
   }
   return clientId;
+}
+
+function getAppVisitorId() {
+  let visitorId = localStorage.getItem("sflAppVisitorId");
+  if (!visitorId) {
+    visitorId = `visitor:${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    localStorage.setItem("sflAppVisitorId", visitorId);
+  }
+  return visitorId;
+}
+
+function renderAppVisitStats(stats = {}) {
+  if (!appVisitsToday || !appVisitsTotal) return;
+  appVisitsToday.textContent = formatCompactNumber(Number(stats.today) || 0);
+  appVisitsTotal.textContent = formatCompactNumber(Number(stats.total) || 0);
+}
+
+async function trackAppVisit() {
+  try {
+    const response = await fetch(`${localApiBase}/api/analytics/visit`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ visitorId: getAppVisitorId() })
+    });
+    if (!response.ok) throw new Error("Analytics API failed");
+    renderAppVisitStats(await response.json());
+  } catch {
+    renderAppVisitStats({});
+  }
 }
 
 function getCleanCount(post) {
@@ -2482,6 +2516,9 @@ function renderTranslations() {
   settingsConnectBtn.textContent = t("Conectar otra granja", "Connect another farm");
   settingsClearFarmBtn.textContent = t("Borrar granja guardada", "Clear saved farm");
   settingsRefreshBtn.textContent = t("Actualizar precios", "Refresh prices");
+  if (appVisitsLabel) appVisitsLabel.textContent = t("Visitas de la app", "App visits");
+  if (appVisitsTodayLabel) appVisitsTodayLabel.textContent = t("Hoy", "Today");
+  if (appVisitsTotalLabel) appVisitsTotalLabel.textContent = t("Total", "Total");
   updateBottomNavLabels();
 
   document.querySelector(".upgrade-phone .upgrade-header h2").textContent = "Upgrades";
@@ -3051,6 +3088,7 @@ renderSummary();
 loadCommunityPosts();
 refreshMarketData();
 loadNftMarket();
+trackAppVisit();
 setInterval(autoRefreshConnectedAccount, 5 * 60 * 1000);
 
 const initialView = new URLSearchParams(window.location.search).get("view");

@@ -81,3 +81,29 @@ on public.farm_profiles for update
 to anon
 using (true)
 with check (true);
+
+create table if not exists public.app_visits (
+  id text primary key,
+  visitor_id text not null,
+  visit_date date not null default current_date,
+  user_agent text not null default '',
+  created_at timestamptz not null default now()
+);
+
+create index if not exists app_visits_visit_date_idx
+on public.app_visits (visit_date);
+
+alter table public.app_visits enable row level security;
+
+drop policy if exists "app_visits_select_public" on public.app_visits;
+drop policy if exists "app_visits_insert_public" on public.app_visits;
+
+create policy "app_visits_select_public"
+on public.app_visits for select
+to anon
+using (true);
+
+create policy "app_visits_insert_public"
+on public.app_visits for insert
+to anon
+with check (true);
