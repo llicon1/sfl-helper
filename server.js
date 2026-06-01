@@ -7,6 +7,7 @@ const PORT = Number(process.env.PORT || 4174);
 const ROOT = __dirname;
 const SFL_WORLD_URL = "https://sfl.world/";
 const SFL_WORLD_PRICES_URL = "https://sfl.world/api/v1/prices";
+const SFL_WORLD_TRADE_CSV_URL = "https://sfl.world/api/v1/trade/csv";
 const FLOWER_COINGECKO_ID = "flower-2";
 const SUPABASE_URL = (process.env.SUPABASE_URL || "").replace(/\/$/, "");
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || "";
@@ -21,6 +22,69 @@ const ANALYTICS_FILE = process.env.VERCEL
   ? path.join(os.tmpdir(), "sfl-market-app-visits.json")
   : path.join(ROOT, "app-visits.json");
 let nftCache = null;
+let marketHistoryCache = { expiresAt: 0, series: {} };
+
+const MARKET_HISTORY_IDS = {
+  Sunflower: 201,
+  Potato: 202,
+  Pumpkin: 203,
+  Carrot: 204,
+  Cabbage: 205,
+  Beetroot: 206,
+  Cauliflower: 207,
+  Parsnip: 208,
+  Radish: 209,
+  Wheat: 210,
+  Kale: 211,
+  Apple: 212,
+  Blueberry: 213,
+  Orange: 214,
+  Eggplant: 215,
+  Corn: 216,
+  Banana: 217,
+  Soybean: 251,
+  Grape: 252,
+  Rice: 253,
+  Olive: 254,
+  Tomato: 255,
+  Lemon: 256,
+  Barley: 257,
+  Rhubarb: 258,
+  Zucchini: 259,
+  Yam: 260,
+  Broccoli: 261,
+  Pepper: 262,
+  Onion: 263,
+  Turnip: 264,
+  Artichoke: 265,
+  Duskberry: 266,
+  Lunara: 267,
+  Celestine: 268,
+  Wood: 601,
+  Stone: 602,
+  Iron: 603,
+  Gold: 604,
+  Egg: 605,
+  Crimstone: 636,
+  Obsidian: 663,
+  Salt: 665,
+  Honey: 614,
+  Leather: 641,
+  Wool: 642,
+  "Merino Wool": 643,
+  Feather: 644,
+  Milk: 645,
+  "Goblin Emblem": 741,
+  "Bumpkin Emblem": 742,
+  "Sunflorian Emblem": 743,
+  "Nightshade Emblem": 744,
+  Ruffroot: 2631,
+  "Chewed Bone": 2632,
+  "Heart Leaf": 2633,
+  Moonfur: 2634,
+  Ribbon: 2636,
+  "Wild Grass": 2638
+};
 
 const mimeTypes = {
   ".html": "text/html; charset=utf-8",
@@ -666,6 +730,84 @@ function parsePriceApi(payload) {
     .filter(Boolean);
 }
 
+function pickSparkPoints(points, currentPrice) {
+  const validPoints = points.filter((entry) => Number.isFinite(entry.price) && entry.price > 0);
+  if (!validPoints.length) return [];
+
+  const latestTime = validPoints.at(-1).time;
+  const dayAgo = latestTime - 24 * 60 * 60 * 1000;
+  let recent = validPoints.filter((entry) => entry.time >= dayAgo);
+  if (recent.length < 2) recent = validPoints.slice(-12);
+  if (!recent.length) return [];
+
+  const sampleCount = Math.min(8, recent.length);
+  const samples = Array.from({ length: sampleCount }, (_, index) => {
+    const sourceIndex = Math.round(index * (recent.length - 1) / Math.max(sampleCount - 1, 1));
+    return recent[sourceIndex].price;
+  });
+
+  if (Number.isFinite(currentPrice) && currentPrice > 0) {
+    samples[samples.length - 1] = currentPrice;
+  }
+
+  return samples;
+}
+
+function calculateTrendFromSpark(spark) {
+  if (!Array.isArray(spark) || spark.length < 2 || !spark[0]) return 0;
+  return ((spark.at(-1) - spark[0]) / spark[0]) * 100;
+}
+
+function parseHistoryCsv(csv, currentPrice) {
+  const points = String(csv || "")
+    .trim()
+    .split(/\r?\n/)
+    .map((line) => {
+      const [timeText, priceText] = line.split(",");
+      const time = new Date(timeText).getTime();
+      const price = Number(priceText);
+      if (!Number.isFinite(time) || !Number.isFinite(price)) return null;
+      return { time, price };
+    })
+    .filter(Boolean);
+
+  const spark = pickSparkPoints(points, currentPrice);
+  return {
+    spark,
+    trend: calculateTrendFromSpark(spark)
+  };
+}
+
+async function fetchMarketHistoryForItems(items) {
+  const now = Date.now();
+  if (marketHistoryCache.expiresAt > now) return marketHistoryCache.series;
+
+  const history = {};
+  const visibleItems = items.filter((item) => MARKET_HISTORY_IDS[item.name]);
+  const batchSize = 8;
+
+  for (let index = 0; index < visibleItems.length; index += batchSize) {
+    const batch = visibleItems.slice(index, index + batchSize);
+    await Promise.all(batch.map(async (item) => {
+      const id = MARKET_HISTORY_IDS[item.name];
+      try {
+        const response = await fetch(`${SFL_WORLD_TRADE_CSV_URL}/${id}.csv?t=${now}`, {
+          headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" }
+        });
+        if (!response.ok) return;
+        history[item.name] = parseHistoryCsv(await response.text(), item.price);
+      } catch {}
+    }));
+  }
+
+  marketHistoryCache = {
+    expiresAt: now + 5 * 60 * 1000,
+    series: history
+  };
+
+  return history;
+}
+
 function stripTags(value = "") {
   return value
     .replace(/<[^>]*>/g, " ")
@@ -916,11 +1058,18 @@ async function handleMarket(res) {
     const payload = await priceResponse.json();
     const items = parsePriceApi(payload);
     if (items.length) {
+      const history = await fetchMarketHistoryForItems(items);
+      const itemsWithHistory = items.map((item) => ({
+        ...item,
+        spark: history[item.name]?.spark?.length ? history[item.name].spark : item.spark,
+        trend: Number.isFinite(history[item.name]?.trend) ? history[item.name].trend : item.trend
+      }));
+
       send(res, 200, JSON.stringify({
         source: "SFL World Prices API",
         updatedAt: payload.updatedAt ? new Date(payload.updatedAt).toISOString() : new Date().toISOString(),
         updatedText: payload.updated_text || "",
-        items
+        items: itemsWithHistory
       }));
       return;
     }
