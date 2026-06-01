@@ -650,6 +650,13 @@ const appVisitsToday = document.querySelector("#appVisitsToday");
 const appVisitsTodayLabel = document.querySelector("#appVisitsTodayLabel");
 const appVisitsTotal = document.querySelector("#appVisitsTotal");
 const appVisitsTotalLabel = document.querySelector("#appVisitsTotalLabel");
+const appVersionLabel = document.querySelector("#appVersionLabel");
+const appBetaNotice = document.querySelector("#appBetaNotice");
+const officialLinksLabel = document.querySelector("#officialLinksLabel");
+const officialDiscordLink = document.querySelector("#officialDiscordLink");
+const officialTelegramLink = document.querySelector("#officialTelegramLink");
+const policyTitle = document.querySelector("#policyTitle");
+const policyText = document.querySelector("#policyText");
 const viewMarketBtn = document.querySelector(".outline-btn");
 const addMissingBtn = document.querySelector(".solid-btn");
 const chartRangeButtons = document.querySelectorAll(".chart-title button");
@@ -2519,6 +2526,23 @@ function renderTranslations() {
   if (appVisitsLabel) appVisitsLabel.textContent = t("Visitas de la app", "App visits");
   if (appVisitsTodayLabel) appVisitsTodayLabel.textContent = t("Hoy", "Today");
   if (appVisitsTotalLabel) appVisitsTotalLabel.textContent = t("Total", "Total");
+  if (appVersionLabel) appVersionLabel.textContent = t("Version", "Version");
+  if (appBetaNotice) {
+    appBetaNotice.textContent = t(
+      "Herramienta no oficial. Los precios y datos publicos pueden tener retraso.",
+      "Unofficial tool. Prices and public data may lag."
+    );
+  }
+  if (officialLinksLabel) officialLinksLabel.textContent = t("Comunidad oficial", "Official community");
+  if (officialDiscordLink) officialDiscordLink.textContent = t("Discord oficial", "Official Discord");
+  if (officialTelegramLink) officialTelegramLink.textContent = t("Telegram oficial", "Official Telegram");
+  if (policyTitle) policyTitle.textContent = t("Avisos y seguridad", "Notices and safety");
+  if (policyText) {
+    policyText.textContent = t(
+      "Nunca ingreses seed phrase ni claves privadas. La app solo usa Farm ID y datos publicos. Tu avatar, banner y publicacion de comunidad pueden ser visibles para otros jugadores.",
+      "Never enter a seed phrase or private keys. The app only uses Farm ID and public data. Your avatar, banner and community post may be visible to other players."
+    );
+  }
   updateBottomNavLabels();
 
   document.querySelector(".upgrade-phone .upgrade-header h2").textContent = "Upgrades";

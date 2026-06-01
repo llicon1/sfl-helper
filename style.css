@@ -4707,3 +4707,61 @@ select {
   font-size: 22px;
   line-height: 1;
 }
+
+.settings-info-card,
+.settings-links-card,
+.settings-policy-card {
+  display: grid;
+  gap: 9px;
+  margin-top: 12px;
+  padding: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background:
+    linear-gradient(145deg, rgba(255, 211, 77, 0.08), transparent 58%),
+    var(--panel);
+}
+
+.settings-info-card span,
+.settings-links-card > span,
+.settings-policy-card span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.settings-info-card strong {
+  display: block;
+  margin-top: 3px;
+  color: var(--gold);
+  font-size: 18px;
+}
+
+.settings-info-card p,
+.settings-policy-card p {
+  margin: 0;
+  color: #c7d2df;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.settings-links-card {
+  grid-template-columns: 1fr 1fr;
+}
+
+.settings-links-card > span {
+  grid-column: 1 / -1;
+}
+
+.settings-links-card a {
+  display: grid;
+  place-items: center;
+  min-height: 42px;
+  border: 1px solid rgba(92, 255, 82, 0.32);
+  border-radius: 8px;
+  background: rgba(92, 255, 82, 0.08);
+  color: var(--green);
+  font-weight: 900;
+  text-decoration: none;
+}
