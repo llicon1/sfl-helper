@@ -888,7 +888,7 @@ function parsePublicAnimalsHtml(html) {
 
   return rows
     .map((row) => {
-      const image = row.match(/<img src="([^"]*\/animals\/[^"]+)"[^>]*title="([^"]+)"/);
+      const image = row.match(/<img src="([^"]*(?:\/img\/animals\/|\/game-assets\/animals\/)[^"]+)"[^>]*title="([^"]+)"/);
       if (!image || !row.includes("Level")) return null;
 
       const status = textFromHtml(row.match(/<div class="badge[^"]*">([\s\S]*?)<\/div>/)?.[1] || "");
@@ -899,7 +899,7 @@ function parsePublicAnimalsHtml(html) {
 
       return {
         type: image[2],
-        image: `${sflWorldUrl.replace(/\/$/, "")}${image[1]}`,
+        image: image[1].startsWith("http") ? image[1] : `${sflWorldUrl.replace(/\/$/, "")}${image[1]}`,
         status,
         level,
         age,
