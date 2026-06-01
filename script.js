@@ -47,7 +47,10 @@ const hiddenMarketNames = new Set([
   "frost pebble",
   "dewbe",
   "dewberry",
-  "refined salt"
+  "refined salt",
+  "capsule bait",
+  "umbrella bait",
+  "crimson baitfish"
 ]);
 
 function isHiddenMarketName(name = "") {
@@ -489,6 +492,22 @@ for (let index = marketItems.length - 1; index >= 0; index -= 1) {
   if (!isVisibleMarketItem(marketItems[index])) marketItems.splice(index, 1);
 }
 
+const allowedApiMarketNames = new Set([
+  ...marketItems.map((item) => getMarketKey(item.marketName || item.name)),
+  "ruffroot",
+  "chewed bone",
+  "heart leaf",
+  "moonfur",
+  "ribbon",
+  "wild grass",
+  "celestine",
+  "lunara",
+  "goblin emblem",
+  "bumpkin emblem",
+  "sunflorian emblem",
+  "nightshade emblem"
+]);
+
 const profileAvatars = [
   { id: "farmer-h", src: "sfl-app-imagen/farmer-H.png", banner: "sfl-app-imagen/farmer-banner.png", label: "Farmer" },
   { id: "farmer-f", src: "sfl-app-imagen/farmer-F.png", banner: "sfl-app-imagen/farmer-bannerM.png", label: "Farmer" },
@@ -810,16 +829,6 @@ function scaleSparkToPrice(spark, price) {
   return values.map((value) => Number((value * ratio).toFixed(8)));
 }
 
-function fallbackSparkForPrice(price, seed = "") {
-  const numericPrice = Number(price);
-  if (!Number.isFinite(numericPrice) || numericPrice <= 0) return [];
-  const code = [...seed].reduce((total, char) => total + char.charCodeAt(0), 0);
-  const direction = code % 2 === 0 ? 1 : -1;
-  const steps = [-0.018, -0.011, -0.015, -0.006, -0.009, -0.003, 0];
-
-  return steps.map((step) => Number((numericPrice * (1 + step * direction)).toFixed(8)));
-}
-
 function parseSflWorldPriceApi(payload) {
   const p2p = payload?.data?.p2p || {};
   const updates = new Map();
@@ -1047,16 +1056,15 @@ async function loadRealMarketPrices() {
 
     updates.forEach((update) => {
       if (!isVisibleMarketItem(update)) return;
+      if (!allowedApiMarketNames.has(getMarketKey(update.marketName || update.name))) return;
       const existing = findMarketItemByName(update.marketName || update.name);
       const spark = Array.isArray(update.spark) && update.spark.length > 1
         ? update.spark
         : scaleSparkToPrice(existing?.spark, update.price);
-      const finalSpark = spark.length > 1
-        ? spark
-        : fallbackSparkForPrice(update.price, update.marketName || update.name);
+      const finalSpark = spark.length > 1 ? spark : [];
       const trend = Number.isFinite(update.trend)
         ? update.trend
-        : calculateTrend(finalSpark);
+        : (finalSpark.length > 1 ? calculateTrend(finalSpark) : null);
       nextItems.push({
         ...(existing || {}),
         ...update,
