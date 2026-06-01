@@ -53,53 +53,6 @@ const hiddenMarketNames = new Set([
   "crimson baitfish"
 ]);
 
-const visibleMarketNames = new Set([
-  "wood",
-  "stone",
-  "iron",
-  "gold",
-  "crimstone",
-  "egg",
-  "pumpkin",
-  "wheat",
-  "carrot",
-  "milk",
-  "salt",
-  "honey",
-  "leather",
-  "wool",
-  "merino wool",
-  "feather",
-  "tomato",
-  "potato",
-  "rhubarb",
-  "zucchini",
-  "yam",
-  "cabbage",
-  "broccoli",
-  "soybean",
-  "beetroot",
-  "pepper",
-  "cauliflower",
-  "parsnip",
-  "eggplant",
-  "corn",
-  "onion",
-  "radish",
-  "turnip",
-  "kale",
-  "artichoke",
-  "barley",
-  "apple",
-  "banana",
-  "blueberry",
-  "lemon",
-  "orange",
-  "grape",
-  "rice",
-  "olive"
-]);
-
 function isHiddenMarketName(name = "") {
   return hiddenMarketNames.has(getMarketKey(name));
 }
@@ -107,7 +60,7 @@ function isHiddenMarketName(name = "") {
 function isVisibleMarketItem(item) {
   const name = item?.marketName || item?.name || item?.esName || "";
   const key = getMarketKey(name);
-  return visibleMarketNames.has(key) && !hiddenMarketNames.has(key);
+  return !hiddenMarketNames.has(key);
 }
 
 const marketItems = [
@@ -487,6 +440,7 @@ const buildingGoals = [
 
 const extraMarketItems = [
   ["salt", "Salt", "Sal", 0.0039],
+  ["obsidian", "Obsidian", "Obsidian", 18.2],
   ["refined-salt", "Refined Salt", "Sal refinada", 0.0394],
   ["oil", "Oil", "Oil", 0.45],
   ["leather", "Leather", "Cuero", 0.08],
@@ -540,10 +494,6 @@ extraMarketItems.forEach(([id, name, esName, price]) => {
 for (let index = marketItems.length - 1; index >= 0; index -= 1) {
   if (!isVisibleMarketItem(marketItems[index])) marketItems.splice(index, 1);
 }
-
-const allowedApiMarketNames = new Set([
-  ...visibleMarketNames
-]);
 
 const profileAvatars = [
   { id: "farmer-h", src: "sfl-app-imagen/farmer-H.png", banner: "sfl-app-imagen/farmer-banner.png", label: "Farmer" },
@@ -866,6 +816,16 @@ function scaleSparkToPrice(spark, price) {
   return values.map((value) => Number((value * ratio).toFixed(8)));
 }
 
+function fallbackSparkForPrice(price, seed = "") {
+  const numericPrice = Number(price);
+  if (!Number.isFinite(numericPrice) || numericPrice <= 0) return [];
+  const code = [...seed].reduce((total, char) => total + char.charCodeAt(0), 0);
+  const direction = code % 2 === 0 ? 1 : -1;
+  const shape = [-0.036, -0.018, -0.028, -0.006, -0.014, 0.008, 0];
+
+  return shape.map((step) => Number((numericPrice * (1 + step * direction)).toFixed(8)));
+}
+
 function parseSflWorldPriceApi(payload) {
   const p2p = payload?.data?.p2p || {};
   const updates = new Map();
@@ -925,6 +885,28 @@ function parseSflWorldPrices(html) {
   });
 
   return updates;
+}
+
+function mergeMarketUpdate(existing, update) {
+  const spark = Array.isArray(update.spark) && update.spark.length > 1
+    ? update.spark
+    : scaleSparkToPrice(existing?.spark, update.price);
+  const finalSpark = spark.length > 1
+    ? spark
+    : fallbackSparkForPrice(update.price, update.marketName || update.name);
+  const trend = Number.isFinite(update.trend)
+    ? update.trend
+    : calculateTrend(finalSpark);
+
+  return {
+    ...(existing || {}),
+    ...update,
+    id: existing?.id || update.id,
+    esName: existing?.esName || update.esName,
+    icon: update.icon || existing?.icon || getSflWorldImage(update.name),
+    spark: finalSpark,
+    trend
+  };
 }
 
 function textFromHtml(value = "") {
@@ -1090,34 +1072,27 @@ async function loadRealMarketPrices() {
 
     let applied = 0;
     const nextItems = [];
-
-    updates.forEach((update) => {
-      if (!isVisibleMarketItem(update)) return;
-      if (!allowedApiMarketNames.has(getMarketKey(update.marketName || update.name))) return;
-      const existing = findMarketItemByName(update.marketName || update.name);
-      const spark = Array.isArray(update.spark) && update.spark.length > 1
-        ? update.spark
-        : scaleSparkToPrice(existing?.spark, update.price);
-      const finalSpark = spark.length > 1 ? spark : [update.price, update.price];
-      const trend = Number.isFinite(update.trend)
-        ? update.trend
-        : calculateTrend(finalSpark);
-      nextItems.push({
-        ...(existing || {}),
-        ...update,
-        id: existing?.id || update.id,
-        esName: existing?.esName || update.esName,
-        icon: update.icon || existing?.icon || getSflWorldImage(update.name),
-        spark: finalSpark,
-        trend
-      });
-      applied += 1;
-    });
+    const usedUpdateKeys = new Set();
 
     marketItems.forEach((item) => {
       if (!isVisibleMarketItem(item)) return;
-      if (nextItems.some((entry) => entry.id === item.id)) return;
-      nextItems.push(item);
+      const key = getMarketKey(item.marketName || item.name);
+      const update = updates.get(key);
+      if (update) {
+        nextItems.push(mergeMarketUpdate(item, update));
+        usedUpdateKeys.add(key);
+        applied += 1;
+      } else {
+        nextItems.push(item);
+      }
+    });
+
+    updates.forEach((update) => {
+      const key = getMarketKey(update.marketName || update.name);
+      if (usedUpdateKeys.has(key) || !isVisibleMarketItem(update)) return;
+      nextItems.push(mergeMarketUpdate(null, update));
+      usedUpdateKeys.add(key);
+      applied += 1;
     });
 
     if (!applied) throw new Error("No market rows matched");
