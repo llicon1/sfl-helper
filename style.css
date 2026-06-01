@@ -4605,3 +4605,62 @@ select {
     font-size: 17px;
   }
 }
+
+@media (max-width: 640px) {
+  .farm-phone .farm-hero {
+    display: grid;
+    grid-template-columns: 104px minmax(0, 1fr);
+    align-items: center;
+    gap: 12px;
+    min-height: 158px;
+    padding: 13px;
+    background-position: center;
+  }
+
+  .farm-phone .farm-hero img {
+    width: 98px;
+    height: 98px;
+    grid-column: 1;
+    grid-row: 1;
+    align-self: end;
+  }
+
+  .farm-phone .farm-hero > div {
+    min-width: 0;
+    padding-bottom: 36px;
+  }
+
+  .farm-phone .farm-hero h3 {
+    max-width: 100%;
+    margin: 3px 0 8px;
+    font-size: clamp(28px, 8vw, 38px);
+    line-height: 1.05;
+    overflow-wrap: anywhere;
+  }
+
+  .farm-phone .farm-hero p {
+    margin: 6px 0 0;
+    font-size: 14px;
+    line-height: 1.35;
+  }
+
+  .farm-phone .profile-hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .farm-phone .profile-hero-actions button {
+    min-height: 34px;
+    padding: 0 10px;
+    font-size: 12px;
+  }
+
+  .farm-phone #farmDashboardSync {
+    position: absolute;
+    right: 13px;
+    bottom: 13px;
+    min-height: 42px;
+    padding: 0 14px;
+  }
+}

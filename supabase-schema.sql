@@ -49,3 +49,35 @@ create policy "community_posts_delete_public"
 on public.community_posts for delete
 to anon
 using (true);
+
+create table if not exists public.farm_profiles (
+  farm_id text primary key,
+  nickname text not null default '',
+  bio text not null default '',
+  avatar text not null default '',
+  banner text not null default 'night',
+  banner_image text not null default '',
+  updated_at timestamptz not null default now()
+);
+
+alter table public.farm_profiles enable row level security;
+
+drop policy if exists "farm_profiles_select_public" on public.farm_profiles;
+drop policy if exists "farm_profiles_insert_public" on public.farm_profiles;
+drop policy if exists "farm_profiles_update_public" on public.farm_profiles;
+
+create policy "farm_profiles_select_public"
+on public.farm_profiles for select
+to anon
+using (true);
+
+create policy "farm_profiles_insert_public"
+on public.farm_profiles for insert
+to anon
+with check (true);
+
+create policy "farm_profiles_update_public"
+on public.farm_profiles for update
+to anon
+using (true)
+with check (true);

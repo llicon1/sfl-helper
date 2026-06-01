@@ -1054,6 +1054,40 @@ function saveFarmSession() {
   }));
 }
 
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener("load", () => resolve(String(reader.result || "")));
+    reader.addEventListener("error", reject);
+    reader.readAsDataURL(file);
+  });
+}
+
+async function compressBannerFile(file) {
+  const original = await readFileAsDataUrl(file);
+  if (!/^image\//.test(file.type || "")) return original;
+
+  try {
+    const image = new Image();
+    image.decoding = "async";
+    image.src = original;
+    await image.decode();
+
+    const maxWidth = 1200;
+    const scale = Math.min(1, maxWidth / Math.max(image.naturalWidth || 1, 1));
+    const width = Math.max(1, Math.round((image.naturalWidth || 1) * scale));
+    const height = Math.max(1, Math.round((image.naturalHeight || 1) * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d");
+    context.drawImage(image, 0, 0, width, height);
+    return canvas.toDataURL("image/jpeg", 0.78);
+  } catch {
+    return original;
+  }
+}
+
 function loadFarmSession() {
   const saved = localStorage.getItem("sflMarketFarm");
   if (!saved) return false;
@@ -1281,6 +1315,14 @@ function animalWakeLabel(animal) {
 
 function getProfileAvatar(id = state.profileAvatar) {
   return profileAvatars.find((avatar) => avatar.id === id) || profileAvatars[0];
+}
+
+function normalizeProfileAvatarId(value = "") {
+  const raw = String(value || "");
+  const byId = profileAvatars.find((avatar) => avatar.id === raw);
+  if (byId) return byId.id;
+  const bySrc = profileAvatars.find((avatar) => decodeURIComponent(avatar.src).toLowerCase() === decodeURIComponent(raw).toLowerCase());
+  return bySrc?.id || state.profileAvatar || profileAvatars[0].id;
 }
 
 function getBannerForAvatarSrc(src = "") {
@@ -1878,7 +1920,7 @@ async function publishCommunityPost(event) {
     message: communityMessage.value.trim() || state.profileBio,
     avatar: getProfileAvatar().src,
     banner: state.profileBanner,
-    bannerImage: "",
+    bannerImage: state.profileBannerImage,
     island: state.farmIsland || state.farmStats || "",
     faction: state.farmFaction || "",
     level: Number(state.farmLevel) || null,
@@ -2040,7 +2082,57 @@ async function toggleCommunityPostLike(postId) {
   renderCommunityPosts();
 }
 
-function saveProfileSettings() {
+function applyRemoteProfile(profile) {
+  if (!profile || !state.farmId || profile.farmId !== state.farmId) return false;
+  if (profile.nickname) state.profileName = profile.nickname;
+  if (profile.bio) state.profileBio = profile.bio;
+  if (profile.avatar) state.profileAvatar = normalizeProfileAvatarId(profile.avatar);
+  if (profile.banner) state.profileBanner = profile.banner;
+  state.profileBannerImage = profile.bannerImage || "";
+  localStorage.setItem("sflProfileName", state.profileName);
+  localStorage.setItem("sflProfileBio", state.profileBio);
+  localStorage.setItem("sflProfileAvatar", state.profileAvatar);
+  localStorage.setItem("sflProfileBanner", state.profileBanner);
+  localStorage.setItem("sflProfileBannerImage", state.profileBannerImage);
+  saveFarmSession();
+  return true;
+}
+
+async function loadRemoteFarmProfile(farmId = state.farmId) {
+  if (!farmId || farmId === "demo") return false;
+  try {
+    const response = await fetch(`${localApiBase}/api/profile/${encodeURIComponent(farmId)}`, { cache: "no-store" });
+    if (!response.ok) throw new Error("Profile API failed");
+    const data = await response.json();
+    const applied = applyRemoteProfile(data.profile);
+    if (applied) renderFarmProfile();
+    return applied;
+  } catch {
+    return false;
+  }
+}
+
+async function saveRemoteFarmProfile() {
+  if (!state.farmId || state.farmId === "demo") return false;
+  try {
+    const response = await fetch(`${localApiBase}/api/profile/${encodeURIComponent(state.farmId)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        nickname: state.profileName,
+        bio: state.profileBio,
+        avatar: state.profileAvatar,
+        banner: state.profileBanner,
+        bannerImage: state.profileBannerImage
+      })
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function saveProfileSettings() {
   state.profileName = profileDisplayName.value.trim();
   state.profileBio = profileBio.value.trim();
   localStorage.setItem("sflProfileName", state.profileName);
@@ -2049,6 +2141,7 @@ function saveProfileSettings() {
   localStorage.setItem("sflProfileBanner", state.profileBanner);
   localStorage.setItem("sflProfileBannerImage", state.profileBannerImage);
   saveFarmSession();
+  saveRemoteFarmProfile();
   renderFarmProfile();
   profileModal.classList.add("hidden");
 }
@@ -2182,6 +2275,7 @@ async function loadFarmById() {
   try {
     const farmData = await fetchPublicFarm(farmId);
     applyPublicFarmData(farmId, farmData);
+    await loadRemoteFarmProfile(farmId);
     farmGateStatus.textContent = t("Granja conectada con datos publicos.", "Farm connected with public data.");
   } catch (error) {
     state.farmId = farmId;
@@ -2209,6 +2303,7 @@ async function syncConnectedFarm() {
   try {
     const farmData = await fetchPublicFarm(state.farmId);
     applyPublicFarmData(state.farmId, farmData);
+    await loadRemoteFarmProfile(state.farmId);
   } catch {
     state.farmSource = t("No se pudo sincronizar", "Could not sync");
     renderFarmProfile();
@@ -2811,20 +2906,27 @@ profileAvatarPicker.addEventListener("click", (event) => {
   if (!button) return;
   state.profileAvatar = button.dataset.avatarId;
   localStorage.setItem("sflProfileAvatar", state.profileAvatar);
+  saveFarmSession();
+  saveRemoteFarmProfile();
   avatarModal.classList.add("hidden");
   renderFarmProfile();
 });
-profileBannerUpload.addEventListener("change", () => {
+profileBannerUpload.addEventListener("change", async () => {
   const file = profileBannerUpload.files?.[0];
   if (!file) return;
-  const reader = new FileReader();
-  reader.addEventListener("load", () => {
-    state.profileBannerImage = String(reader.result || "");
+  changeBannerBtn.disabled = true;
+  changeBannerBtn.textContent = t("Guardando...", "Saving...");
+  try {
+    state.profileBannerImage = await compressBannerFile(file);
     localStorage.setItem("sflProfileBannerImage", state.profileBannerImage);
     saveFarmSession();
+    await saveRemoteFarmProfile();
     renderFarmProfile();
-  });
-  reader.readAsDataURL(file);
+  } finally {
+    changeBannerBtn.disabled = false;
+    changeBannerBtn.textContent = t("Cambiar banner", "Change banner");
+    profileBannerUpload.value = "";
+  }
 });
 changeAvatarBtn.addEventListener("click", () => {
   avatarModal.classList.remove("hidden");
@@ -2919,6 +3021,7 @@ async function autoRefreshConnectedAccount() {
   try {
     await Promise.allSettled([
       syncConnectedFarm(),
+      loadRemoteFarmProfile(),
       refreshMarketData(),
       loadCommunityPosts(),
       loadNftMarket()
@@ -2937,6 +3040,7 @@ if (previewMode) {
   setGateVisible(false);
 } else if (loadFarmSession()) {
   setGateVisible(false);
+  setTimeout(() => loadRemoteFarmProfile(), 250);
   setTimeout(() => syncConnectedFarm(), 700);
 } else {
   setGateVisible(true);

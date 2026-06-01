@@ -13,6 +13,9 @@ const COMMUNITY_SEED_FILE = path.join(ROOT, "community-posts.json");
 const COMMUNITY_FILE = process.env.VERCEL
   ? path.join(os.tmpdir(), "sfl-market-community-posts.json")
   : COMMUNITY_SEED_FILE;
+const PROFILE_FILE = process.env.VERCEL
+  ? path.join(os.tmpdir(), "sfl-market-farm-profiles.json")
+  : path.join(ROOT, "farm-profiles.json");
 let nftCache = null;
 
 const mimeTypes = {
@@ -168,6 +171,34 @@ function dbToPost(row = {}) {
   });
 }
 
+function normalizeFarmProfile(profile = {}) {
+  return {
+    farmId: cleanText(profile.farmId || profile.farm_id || "", 24).replace(/[^0-9]/g, ""),
+    nickname: cleanText(profile.nickname || "", 32),
+    bio: cleanText(profile.bio || "", 160),
+    avatar: cleanText(profile.avatar || "", 160),
+    banner: cleanText(profile.banner || "night", 32),
+    bannerImage: cleanText(profile.bannerImage || profile.banner_image || "", 1_500_000),
+    updatedAt: profile.updatedAt || profile.updated_at || new Date().toISOString()
+  };
+}
+
+function profileToDb(profile) {
+  return {
+    farm_id: profile.farmId,
+    nickname: profile.nickname,
+    bio: profile.bio,
+    avatar: profile.avatar,
+    banner: profile.banner,
+    banner_image: profile.bannerImage,
+    updated_at: profile.updatedAt
+  };
+}
+
+function dbToProfile(row = {}) {
+  return normalizeFarmProfile(row);
+}
+
 async function supabaseRequest(pathname, options = {}) {
   const response = await fetch(`${SUPABASE_URL}/rest/v1/${pathname}`, {
     ...options,
@@ -221,6 +252,82 @@ async function deleteCommunityPostStore(postId, farmId) {
     method: "DELETE"
   });
   return readCommunityPostsStore();
+}
+
+function readLocalProfiles() {
+  try {
+    const data = JSON.parse(fs.readFileSync(PROFILE_FILE, "utf8"));
+    return Array.isArray(data.profiles) ? data.profiles.map(normalizeFarmProfile) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeLocalProfiles(profiles) {
+  fs.writeFileSync(PROFILE_FILE, `${JSON.stringify({ profiles }, null, 2)}\n`);
+}
+
+async function readFarmProfileStore(farmId) {
+  if (!isSupabaseEnabled()) {
+    return readLocalProfiles().find((profile) => profile.farmId === farmId) || null;
+  }
+
+  const rows = await supabaseRequest(`farm_profiles?select=*&farm_id=eq.${encodeURIComponent(farmId)}&limit=1`);
+  return Array.isArray(rows) && rows[0] ? dbToProfile(rows[0]) : null;
+}
+
+async function writeFarmProfileStore(profile) {
+  if (!isSupabaseEnabled()) {
+    const profiles = readLocalProfiles().filter((entry) => entry.farmId !== profile.farmId);
+    profiles.unshift(profile);
+    writeLocalProfiles(profiles.slice(0, 200));
+    return profile;
+  }
+
+  const rows = await supabaseRequest("farm_profiles?on_conflict=farm_id", {
+    method: "POST",
+    headers: { Prefer: "resolution=merge-duplicates,return=representation" },
+    body: JSON.stringify(profileToDb(profile))
+  });
+  return Array.isArray(rows) && rows[0] ? dbToProfile(rows[0]) : profile;
+}
+
+async function handleFarmProfile(req, res) {
+  const pathname = new URL(req.url, `http://127.0.0.1:${PORT}`).pathname;
+  const farmId = decodeURIComponent(pathname.split("/").pop() || "").replace(/[^0-9]/g, "");
+
+  if (!farmId) {
+    send(res, 400, JSON.stringify({ error: "Missing farm id" }));
+    return;
+  }
+
+  if (req.method === "GET") {
+    try {
+      send(res, 200, JSON.stringify({ profile: await readFarmProfileStore(farmId) }));
+    } catch {
+      send(res, 200, JSON.stringify({ profile: null }));
+    }
+    return;
+  }
+
+  if (req.method !== "POST") {
+    send(res, 405, JSON.stringify({ error: "Method not allowed" }));
+    return;
+  }
+
+  const payload = await readJsonBody(req);
+  const profile = normalizeFarmProfile({
+    ...payload,
+    farmId,
+    updatedAt: new Date().toISOString()
+  });
+
+  if (!profile.farmId) {
+    send(res, 400, JSON.stringify({ error: "Missing farm id" }));
+    return;
+  }
+
+  send(res, 200, JSON.stringify({ profile: await writeFarmProfileStore(profile) }));
 }
 
 async function handleCommunity(req, res) {
@@ -728,6 +835,11 @@ async function handleRequest(req, res) {
 
     if (req.url.startsWith("/api/farm/")) {
       await handleFarm(req, res);
+      return;
+    }
+
+    if (req.url.startsWith("/api/profile/")) {
+      await handleFarmProfile(req, res);
       return;
     }
 
