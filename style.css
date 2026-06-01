@@ -3380,7 +3380,7 @@ button.social-stat:hover {
 }
 
 .live-price-mark {
-  display: inline-flex;
+  display: none;
   align-items: center;
   min-height: 24px;
   color: var(--muted);

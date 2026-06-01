@@ -97,14 +97,7 @@ const visibleMarketNames = new Set([
   "orange",
   "grape",
   "rice",
-  "olive",
-  "duskberry",
-  "lunara",
-  "celestine",
-  "goblin emblem",
-  "bumpkin emblem",
-  "sunflorian emblem",
-  "nightshade emblem"
+  "olive"
 ]);
 
 function isHiddenMarketName(name = "") {
@@ -1104,11 +1097,11 @@ async function loadRealMarketPrices() {
       const existing = findMarketItemByName(update.marketName || update.name);
       const spark = Array.isArray(update.spark) && update.spark.length > 1
         ? update.spark
-        : [];
-      const finalSpark = spark.length > 1 ? spark : [];
+        : scaleSparkToPrice(existing?.spark, update.price);
+      const finalSpark = spark.length > 1 ? spark : [update.price, update.price];
       const trend = Number.isFinite(update.trend)
         ? update.trend
-        : (finalSpark.length > 1 ? calculateTrend(finalSpark) : null);
+        : calculateTrend(finalSpark);
       nextItems.push({
         ...(existing || {}),
         ...update,
@@ -2470,13 +2463,9 @@ async function syncConnectedFarm() {
 }
 
 function getSparkline(item) {
-  if (!Number.isFinite(item.trend)) {
-    return `<span class="live-price-mark">${t("Actual", "Live")}</span>`;
-  }
-  const values = Array.isArray(item.spark) && item.spark.length > 1 ? item.spark : [];
-  if (values.length < 2) {
-    return `<span class="live-price-mark">${t("Actual", "Live")}</span>`;
-  }
+  const values = Array.isArray(item.spark) && item.spark.length > 1
+    ? item.spark
+    : [item.price || 0, item.price || 0];
   const points = sparklinePoints(values, 56, 48, 42, 30, 9);
 
   return `<svg viewBox="0 0 56 48" aria-hidden="true"><polyline points="${points}"></polyline></svg>`;
@@ -2703,7 +2692,7 @@ function renderMarket() {
       const subtotal = (state.quantities[item.id] || 0) * item.price;
       const hasTrend = Number.isFinite(item.trend) && Array.isArray(item.spark) && item.spark.length > 1;
       const trendClass = hasTrend ? (item.trend >= 0 ? "up" : "down") : "flat";
-      const trendLabel = hasTrend ? `${item.trend >= 0 ? "+" : ""}${item.trend.toFixed(2)}%` : "";
+      const trendLabel = hasTrend ? `${item.trend >= 0 ? "+" : ""}${item.trend.toFixed(2)}%` : "+0.00%";
       const isFavorite = state.favorites.has(item.id);
       const card = document.createElement("article");
       card.className = "market-row compact-market-row";
