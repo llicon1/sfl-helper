@@ -891,12 +891,17 @@ function mergeMarketUpdate(existing, update) {
   const spark = Array.isArray(update.spark) && update.spark.length > 1
     ? update.spark
     : scaleSparkToPrice(existing?.spark, update.price);
-  const finalSpark = spark.length > 1
+  let finalSpark = spark.length > 1
     ? spark
     : fallbackSparkForPrice(update.price, update.marketName || update.name);
-  const trend = Number.isFinite(update.trend)
+  let trend = Number.isFinite(update.trend)
     ? update.trend
     : calculateTrend(finalSpark);
+
+  if (Math.abs(trend) < 0.01) {
+    finalSpark = fallbackSparkForPrice(update.price, update.marketName || update.name);
+    trend = calculateTrend(finalSpark);
+  }
 
   return {
     ...(existing || {}),
