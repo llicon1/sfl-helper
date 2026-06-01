@@ -3387,6 +3387,10 @@ button.social-stat:hover {
   color: var(--red);
 }
 
+.flat {
+  color: var(--muted);
+}
+
 .quantity-input {
   grid-area: qty;
   height: 36px;

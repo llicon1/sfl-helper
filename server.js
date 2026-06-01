@@ -6,6 +6,7 @@ const path = require("path");
 const PORT = Number(process.env.PORT || 4174);
 const ROOT = __dirname;
 const SFL_WORLD_URL = "https://sfl.world/";
+const SFL_WORLD_PRICES_URL = "https://sfl.world/api/v1/prices";
 const FLOWER_COINGECKO_ID = "flower-2";
 const SUPABASE_URL = (process.env.SUPABASE_URL || "").replace(/\/$/, "");
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || "";
@@ -645,6 +646,26 @@ function parseRows(html) {
     .filter(Boolean);
 }
 
+function parsePriceApi(payload) {
+  const p2p = payload?.data?.p2p || {};
+
+  return Object.entries(p2p)
+    .map(([name, price]) => {
+      const numericPrice = Number(price);
+      if (!name || !Number.isFinite(numericPrice)) return null;
+
+      const tradeName = encodeURIComponent(name);
+      return {
+        name,
+        price: numericPrice,
+        spark: [],
+        trend: null,
+        tradeUrl: `${SFL_WORLD_URL}tools/trade/?name=${tradeName}`
+      };
+    })
+    .filter(Boolean);
+}
+
 function stripTags(value = "") {
   return value
     .replace(/<[^>]*>/g, " ")
@@ -887,6 +908,24 @@ async function handleNfts(res) {
 }
 
 async function handleMarket(res) {
+  const priceResponse = await fetch(`${SFL_WORLD_PRICES_URL}?t=${Date.now()}`, {
+    headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" }
+  });
+
+  if (priceResponse.ok) {
+    const payload = await priceResponse.json();
+    const items = parsePriceApi(payload);
+    if (items.length) {
+      send(res, 200, JSON.stringify({
+        source: "SFL World Prices API",
+        updatedAt: payload.updatedAt ? new Date(payload.updatedAt).toISOString() : new Date().toISOString(),
+        updatedText: payload.updated_text || "",
+        items
+      }));
+      return;
+    }
+  }
+
   const response = await fetch(`${SFL_WORLD_URL}?t=${Date.now()}`, {
     headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" }
   });

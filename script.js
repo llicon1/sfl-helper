@@ -782,7 +782,6 @@ function normalizeMarketUpdate(update) {
     next.name = "Salt";
     next.marketName = "Salt";
     next.esName = itemTranslations.Salt;
-    if (Number(next.price) > 0.02) next.price = Number(next.price) / 10;
   }
   if (key === "refined salt") {
     next.id = "refined-salt";
@@ -799,6 +798,30 @@ function calculateTrend(spark) {
   const last = spark[spark.length - 1];
   if (!first) return 0;
   return ((last - first) / first) * 100;
+}
+
+function parseSflWorldPriceApi(payload) {
+  const p2p = payload?.data?.p2p || {};
+  const updates = new Map();
+
+  Object.entries(p2p).forEach(([marketName, price]) => {
+    const numericPrice = Number(price);
+    if (!marketName || !Number.isFinite(numericPrice)) return;
+
+    updates.set(getMarketKey(marketName), normalizeMarketUpdate({
+      name: marketName,
+      id: slugifyItemName(marketName),
+      marketName,
+      esName: itemTranslations[marketName] || marketName,
+      icon: getSflWorldImage(marketName),
+      tradeUrl: `${sflWorldUrl}tools/trade/?name=${encodeURIComponent(marketName)}`,
+      price: numericPrice,
+      spark: [],
+      trend: null
+    }));
+  });
+
+  return updates;
 }
 
 function parseSflWorldPrices(html) {
@@ -988,8 +1011,15 @@ async function loadRealMarketPrices() {
       }));
       source = data.source || "SFL World";
     } catch {
-      const html = await fetchTextWithFallback(sflWorldUrl);
-      updates = parseSflWorldPrices(html);
+      try {
+        const response = await fetch(`${sflWorldUrl}api/v1/prices?t=${Date.now()}`, { cache: "no-store" });
+        if (!response.ok) throw new Error(`Prices API HTTP ${response.status}`);
+        updates = parseSflWorldPriceApi(await response.json());
+        source = "SFL World Prices API";
+      } catch {
+        const html = await fetchTextWithFallback(sflWorldUrl);
+        updates = parseSflWorldPrices(html);
+      }
     }
 
     let applied = 0;
@@ -1704,8 +1734,10 @@ function getAssetByKey(kind, id) {
       title: itemLabel(item),
       image: item.icon,
       price: item.price,
-      meta: `${formatUsd(item.price)} - ${item.trend >= 0 ? "+" : ""}${item.trend.toFixed(2)}%`,
-      series: item.spark,
+      meta: Number.isFinite(item.trend)
+        ? `${formatUsd(item.price)} - ${item.trend >= 0 ? "+" : ""}${item.trend.toFixed(2)}%`
+        : `${formatUsd(item.price)} - ${t("precio API", "API price")}`,
+      series: Array.isArray(item.spark) && item.spark.length > 1 ? item.spark : [item.price, item.price],
       url: getSunflowerMarketUrl(item)
     };
   }
@@ -2355,7 +2387,10 @@ async function syncConnectedFarm() {
 }
 
 function getSparkline(item) {
-  const points = sparklinePoints(item.spark, 56, 48, 42, 30, 9);
+  const values = Array.isArray(item.spark) && item.spark.length > 1
+    ? item.spark
+    : [item.price || 0, item.price || 0];
+  const points = sparklinePoints(values, 56, 48, 42, 30, 9);
 
   return `<svg viewBox="0 0 56 48" aria-hidden="true"><polyline points="${points}"></polyline></svg>`;
 }
@@ -2579,8 +2614,9 @@ function renderMarket() {
     .forEach((item) => {
       const quantity = state.quantities[item.id] || "";
       const subtotal = (state.quantities[item.id] || 0) * item.price;
-      const trendClass = item.trend >= 0 ? "up" : "down";
-      const trendLabel = `${item.trend >= 0 ? "+" : ""}${item.trend.toFixed(2)}%`;
+      const hasTrend = Number.isFinite(item.trend) && Array.isArray(item.spark) && item.spark.length > 1;
+      const trendClass = hasTrend ? (item.trend >= 0 ? "up" : "down") : "flat";
+      const trendLabel = hasTrend ? `${item.trend >= 0 ? "+" : ""}${item.trend.toFixed(2)}%` : "API";
       const isFavorite = state.favorites.has(item.id);
       const card = document.createElement("article");
       card.className = "market-row compact-market-row";
@@ -2613,7 +2649,8 @@ function renderMarket() {
 
 function renderMarketStats() {
   const mostExpensive = [...marketItems].sort((a, b) => b.price - a.price)[0];
-  const best = [...marketItems].sort((a, b) => b.trend - a.trend)[0];
+  const trendedItems = marketItems.filter((item) => Number.isFinite(item.trend));
+  const best = trendedItems.sort((a, b) => b.trend - a.trend)[0];
   const activeCount = marketItems.filter((item) => (state.quantities[item.id] || 0) > 0).length;
 
   topItem.textContent = mostExpensive ? `${itemLabel(mostExpensive)} ${formatMarketNumber(mostExpensive.price)} F` : "-";
@@ -2625,7 +2662,8 @@ function renderMarketStats() {
 function renderHomeMarketSummary() {
   if (!homeTopItem) return;
   const mostExpensive = [...marketItems].sort((a, b) => b.price - a.price)[0];
-  const best = [...marketItems].sort((a, b) => b.trend - a.trend)[0];
+  const trendedItems = marketItems.filter((item) => Number.isFinite(item.trend));
+  const best = trendedItems.sort((a, b) => b.trend - a.trend)[0];
   const activeCount = marketItems.filter((item) => (state.quantities[item.id] || 0) > 0).length;
   const total = calculateCartTotal();
 
