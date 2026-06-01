@@ -2334,6 +2334,16 @@ async function fetchPublicFarm(farmId) {
 
 function applyPublicFarmData(farmId, farmData) {
   const farm = farmData?.farm || farmData;
+  const balances = farm?.balances || {};
+  const flowerBalance = Number(
+    balances.flower
+    ?? balances.FLOWER
+    ?? farm?.balance?.flower
+    ?? farm?.balance?.FLOWER
+    ?? farm?.flower
+    ?? farm?.sfl
+  );
+
   state.farmId = farmId;
   state.farmName = farm?.username || farm?.name || `Farm #${farmId}`;
   state.farmSource = farmData?.source
@@ -2353,19 +2363,18 @@ function applyPublicFarmData(farmId, farmData) {
   state.farmVip = Boolean(farm?.vip);
   state.farmVerified = Boolean(farm?.verified);
   state.farmBalances = {
-    FLOWER: Number(farm?.balances?.flower),
-    Coins: Number(farm?.balances?.coins),
-    Gems: Number(farm?.balances?.gem),
-    Marks: Number(farm?.balances?.marks)
+    FLOWER: flowerBalance,
+    Coins: Number(balances.coins ?? balances.Coins),
+    Gems: Number(balances.gem ?? balances.gems ?? balances.Gem ?? balances.Gems),
+    Marks: Number(balances.marks ?? balances.mark ?? balances.Marks ?? balances.Mark)
   };
   state.farmStock = farmData?.publicStock || farmData?.inventory || farmData?.resources || {};
   state.farmAnimals = Array.isArray(farmData?.animals) ? farmData.animals : [];
   state.farmBumpkin = farmData?.bumpkin || farm?.bumpkin || null;
 
-  const flower = Number(farm?.balances?.flower || farm?.balance?.flower || farm?.flower || farm?.sfl);
-  if (Number.isFinite(flower)) {
-    state.balance = flower;
-    balanceInput.value = flower;
+  if (Number.isFinite(flowerBalance)) {
+    state.balance = flowerBalance;
+    balanceInput.value = flowerBalance;
   }
 
   const inventory = farmData?.inventory || farmData?.resources || farmData?.publicStock;
@@ -3186,6 +3195,14 @@ async function autoRefreshConnectedAccount() {
     autoRefreshRunning = false;
   }
 }
+
+window.addEventListener("pageshow", (event) => {
+  if (event.persisted) autoRefreshConnectedAccount();
+});
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") autoRefreshConnectedAccount();
+});
 
 renderGoalOptions();
 renderTranslations();
