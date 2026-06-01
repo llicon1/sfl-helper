@@ -827,6 +827,17 @@ button {
   border-radius: 8px;
   background: rgba(99, 240, 66, 0.06);
   text-align: right;
+  cursor: pointer;
+}
+
+.flower-ticker:hover {
+  border-color: rgba(99, 240, 66, 0.75);
+  background: rgba(99, 240, 66, 0.11);
+}
+
+.compact-ticker {
+  min-width: 94px;
+  margin-left: auto;
 }
 
 .flower-ticker span {
@@ -839,6 +850,75 @@ button {
 .flower-ticker strong {
   color: var(--green);
   font-size: 15px;
+}
+
+.flower-calculator-card {
+  max-width: 420px;
+}
+
+.flower-rate-card,
+.converter-field {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.flower-rate-card span,
+.converter-field span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.flower-rate-card strong {
+  color: var(--green);
+  font-size: 28px;
+}
+
+.converter-field input {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid #334154;
+  border-radius: 8px;
+  background: #101923;
+  color: var(--text);
+  font-size: 22px;
+  font-weight: 900;
+  padding: 0 12px;
+}
+
+.flower-calculator-card p {
+  color: var(--muted);
+  margin: 12px 0 0;
+  line-height: 1.45;
+}
+
+@media (max-width: 520px) {
+  .upgrade-header {
+    gap: 8px;
+  }
+
+  .compact-ticker {
+    min-width: 76px;
+    padding: 5px 7px;
+  }
+
+  .compact-ticker span {
+    font-size: 8px;
+  }
+
+  .compact-ticker strong {
+    font-size: 11px;
+  }
+
+  .upgrade-header .lang-btn {
+    min-width: 58px;
+  }
 }
 
 .lang-btn,

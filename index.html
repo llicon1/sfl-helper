@@ -44,9 +44,9 @@
         </div>
 
         <div class="header-actions">
-          <div class="flower-ticker">
+          <div class="flower-ticker" data-flower-calculator role="button" tabindex="0">
             <span>FLOWER</span>
-            <strong id="homeFlowerUsdPrice">$--</strong>
+            <strong id="homeFlowerUsdPrice" data-flower-usd-price>$--</strong>
           </div>
           <button class="lang-btn" type="button" data-lang-toggle>ES</button>
           <button class="icon-btn" type="button" aria-label="Notificaciones">!</button>
@@ -118,9 +118,9 @@
         </div>
 
         <div class="header-actions">
-          <div class="flower-ticker">
+          <div class="flower-ticker" data-flower-calculator role="button" tabindex="0">
             <span>FLOWER</span>
-            <strong id="flowerUsdPrice">$--</strong>
+            <strong id="flowerUsdPrice" data-flower-usd-price>$--</strong>
           </div>
           <button class="lang-btn" type="button" data-lang-toggle>ES</button>
           <button class="icon-btn" type="button" aria-label="Notificaciones">!</button>
@@ -227,6 +227,10 @@
       <header class="upgrade-header">
         <button class="back-btn" type="button" data-view="home" aria-label="Volver">‹</button>
         <h2>Mi granja</h2>
+        <div class="flower-ticker compact-ticker" data-flower-calculator role="button" tabindex="0">
+          <span>FLOWER</span>
+          <strong data-flower-usd-price>$--</strong>
+        </div>
         <button class="lang-btn" type="button" data-lang-toggle>ES</button>
       </header>
 
@@ -315,6 +319,10 @@
       <header class="upgrade-header">
         <button class="back-btn" type="button" data-view="home" aria-label="Volver">‹</button>
         <h2>Comunidad</h2>
+        <div class="flower-ticker compact-ticker" data-flower-calculator role="button" tabindex="0">
+          <span>FLOWER</span>
+          <strong data-flower-usd-price>$--</strong>
+        </div>
         <button class="lang-btn" type="button" data-lang-toggle>ES</button>
       </header>
 
@@ -414,6 +422,10 @@
       <header class="upgrade-header">
         <button class="back-btn" type="button" data-view="home" aria-label="Volver">‹</button>
         <h2>NFTs</h2>
+        <div class="flower-ticker compact-ticker" data-flower-calculator role="button" tabindex="0">
+          <span>FLOWER</span>
+          <strong data-flower-usd-price>$--</strong>
+        </div>
         <button class="lang-btn" type="button" data-lang-toggle>ES</button>
       </header>
 
@@ -463,6 +475,10 @@
       <header class="upgrade-header">
         <button class="back-btn" type="button" data-view="home" aria-label="Volver">‹</button>
         <h2>Ajustes</h2>
+        <div class="flower-ticker compact-ticker" data-flower-calculator role="button" tabindex="0">
+          <span>FLOWER</span>
+          <strong data-flower-usd-price>$--</strong>
+        </div>
         <button class="lang-btn" type="button" data-lang-toggle>ES</button>
       </header>
 
@@ -528,6 +544,10 @@
       <header class="upgrade-header">
         <button class="back-btn" type="button" data-view="home" aria-label="Volver">‹</button>
         <h2>Upgrades</h2>
+        <div class="flower-ticker compact-ticker" data-flower-calculator role="button" tabindex="0">
+          <span>FLOWER</span>
+          <strong data-flower-usd-price>$--</strong>
+        </div>
         <button class="lang-btn" type="button" data-lang-toggle>ES</button>
       </header>
 
@@ -645,6 +665,31 @@
     </div>
   </section>
 
-  <script src="script.js?v=20260531-stable1"></script>
+  <section id="flowerCalculatorPanel" class="asset-detail hidden" aria-label="Calculadora FLOWER">
+    <div class="asset-detail-card flower-calculator-card">
+      <header>
+        <div>
+          <span id="flowerCalculatorKicker">Calculadora</span>
+          <h3 id="flowerCalculatorTitle">FLOWER / USDT</h3>
+        </div>
+        <button id="closeFlowerCalculator" type="button" aria-label="Cerrar">×</button>
+      </header>
+      <div class="flower-rate-card">
+        <span id="flowerRateLabel">Precio actual</span>
+        <strong id="flowerCalculatorRate">$--</strong>
+      </div>
+      <label class="converter-field" for="flowerAmountInput">
+        <span>FLOWER</span>
+        <input id="flowerAmountInput" type="number" min="0" step="0.000001" inputmode="decimal" placeholder="0">
+      </label>
+      <label class="converter-field" for="usdAmountInput">
+        <span>USD / USDT</span>
+        <input id="usdAmountInput" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0">
+      </label>
+      <p id="flowerCalculatorHint">Toca el precio de FLOWER en cualquier pestaña para abrir esta calculadora.</p>
+    </div>
+  </section>
+
+  <script src="script.js?v=20260601-flower-calculator"></script>
 </body>
 </html>

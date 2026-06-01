@@ -670,6 +670,8 @@ const notificationBtn = document.querySelector(".icon-btn");
 const languageButtons = document.querySelectorAll("[data-lang-toggle]");
 const flowerUsdPrice = document.querySelector("#flowerUsdPrice");
 const homeFlowerUsdPrice = document.querySelector("#homeFlowerUsdPrice");
+const flowerUsdPriceDisplays = document.querySelectorAll("[data-flower-usd-price]");
+const flowerCalculatorTriggers = document.querySelectorAll("[data-flower-calculator]");
 const homeBalance = document.querySelector("#homeBalance");
 const homeBalanceHint = document.querySelector("#homeBalanceHint");
 const homeFarmName = document.querySelector("#homeFarmName");
@@ -695,6 +697,12 @@ const alertUpBtn = document.querySelector("#alertUpBtn");
 const alertDownBtn = document.querySelector("#alertDownBtn");
 const assetMarketLink = document.querySelector("#assetMarketLink");
 const assetAlertStatus = document.querySelector("#assetAlertStatus");
+const flowerCalculatorPanel = document.querySelector("#flowerCalculatorPanel");
+const closeFlowerCalculator = document.querySelector("#closeFlowerCalculator");
+const flowerCalculatorRate = document.querySelector("#flowerCalculatorRate");
+const flowerAmountInput = document.querySelector("#flowerAmountInput");
+const usdAmountInput = document.querySelector("#usdAmountInput");
+const flowerCalculatorHint = document.querySelector("#flowerCalculatorHint");
 
 function formatFlower(value, short = false) {
   const suffix = short ? " F" : " FLOWER";
@@ -1010,6 +1018,18 @@ async function fetchTextWithFallback(url) {
   }
 }
 
+function getFlowerUsdLabel() {
+  return `$${flowerUsd.toFixed(4)} ${flowerUsdChange >= 0 ? "+" : ""}${flowerUsdChange.toFixed(1)}%`;
+}
+
+function updateFlowerUsdDisplays() {
+  const label = getFlowerUsdLabel();
+  flowerUsdPriceDisplays.forEach((display) => {
+    display.textContent = label;
+  });
+  if (flowerCalculatorRate) flowerCalculatorRate.textContent = label;
+}
+
 async function loadFlowerUsdPrice() {
   const url = `https://api.coingecko.com/api/v3/simple/price?ids=${flowerCoinGeckoId}&vs_currencies=usd&include_24hr_change=true`;
 
@@ -1029,11 +1049,9 @@ async function loadFlowerUsdPrice() {
 
     flowerUsd = price;
     if (Number.isFinite(change)) flowerUsdChange = change;
-    flowerUsdPrice.textContent = `$${price.toFixed(4)} ${flowerUsdChange >= 0 ? "+" : ""}${flowerUsdChange.toFixed(1)}%`;
-    if (homeFlowerUsdPrice) homeFlowerUsdPrice.textContent = flowerUsdPrice.textContent;
+    updateFlowerUsdDisplays();
   } catch {
-    flowerUsdPrice.textContent = `$${flowerUsd.toFixed(4)} ${flowerUsdChange >= 0 ? "+" : ""}${flowerUsdChange.toFixed(1)}%`;
-    if (homeFlowerUsdPrice) homeFlowerUsdPrice.textContent = flowerUsdPrice.textContent;
+    updateFlowerUsdDisplays();
   }
 }
 
@@ -1259,7 +1277,7 @@ function renderHomeDashboard() {
   homeFarmBalances.innerHTML = balances
     .map(([label, value]) => `<b>${label}: ${formatCompactNumber(Number(value))}</b>`)
     .join("");
-  if (homeFlowerUsdPrice && flowerUsdPrice) homeFlowerUsdPrice.textContent = flowerUsdPrice.textContent;
+  updateFlowerUsdDisplays();
   renderHomeMarketSummary();
 }
 
@@ -1950,6 +1968,36 @@ function openAssetDetail(kind, id) {
 
 function closeAssetPanel() {
   assetDetailPanel.classList.add("hidden");
+}
+
+function updateFlowerCalculatorFromFlower() {
+  if (!flowerAmountInput || document.activeElement !== flowerAmountInput) return;
+  const flower = Number(flowerAmountInput.value);
+  usdAmountInput.value = Number.isFinite(flower) && flower > 0
+    ? (flower * flowerUsd).toFixed(2)
+    : "";
+}
+
+function updateFlowerCalculatorFromUsd() {
+  if (!usdAmountInput || document.activeElement !== usdAmountInput) return;
+  const usd = Number(usdAmountInput.value);
+  flowerAmountInput.value = Number.isFinite(usd) && usd > 0 && flowerUsd > 0
+    ? (usd / flowerUsd).toFixed(6)
+    : "";
+}
+
+function openFlowerCalculator() {
+  updateFlowerUsdDisplays();
+  flowerCalculatorPanel.classList.remove("hidden");
+  if (!flowerAmountInput.value && Number(state.balance) > 0) {
+    flowerAmountInput.value = Number(state.balance).toFixed(3);
+    usdAmountInput.value = (Number(state.balance) * flowerUsd).toFixed(2);
+  }
+  flowerAmountInput.focus();
+}
+
+function closeFlowerCalculatorPanel() {
+  flowerCalculatorPanel.classList.add("hidden");
 }
 
 async function saveAssetAlert(direction) {
@@ -2643,6 +2691,15 @@ function renderTranslations() {
       "Never enter a seed phrase or private keys. The app only uses Farm ID and public data. Your avatar, banner and community post may be visible to other players."
     );
   }
+  document.querySelector("#flowerCalculatorKicker").textContent = t("Calculadora", "Calculator");
+  document.querySelector("#flowerCalculatorTitle").textContent = "FLOWER / USDT";
+  document.querySelector("#flowerRateLabel").textContent = t("Precio actual", "Current price");
+  document.querySelector('label[for="flowerAmountInput"] span').textContent = "FLOWER";
+  document.querySelector('label[for="usdAmountInput"] span').textContent = "USD / USDT";
+  flowerCalculatorHint.textContent = t(
+    "Toca el precio de FLOWER en cualquier pestaña para abrir esta calculadora.",
+    "Tap the FLOWER price on any tab to open this calculator."
+  );
   updateBottomNavLabels();
 
   document.querySelector(".upgrade-phone .upgrade-header h2").textContent = "Upgrades";
@@ -2946,6 +3003,21 @@ closeAssetDetail.addEventListener("click", closeAssetPanel);
 assetDetailPanel.addEventListener("click", (event) => {
   if (event.target === assetDetailPanel) closeAssetPanel();
 });
+flowerCalculatorTriggers.forEach((trigger) => {
+  trigger.addEventListener("click", openFlowerCalculator);
+  trigger.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      openFlowerCalculator();
+    }
+  });
+});
+closeFlowerCalculator.addEventListener("click", closeFlowerCalculatorPanel);
+flowerCalculatorPanel.addEventListener("click", (event) => {
+  if (event.target === flowerCalculatorPanel) closeFlowerCalculatorPanel();
+});
+flowerAmountInput.addEventListener("input", updateFlowerCalculatorFromFlower);
+usdAmountInput.addEventListener("input", updateFlowerCalculatorFromUsd);
 alertUpBtn.addEventListener("click", () => saveAssetAlert("up"));
 alertDownBtn.addEventListener("click", () => saveAssetAlert("down"));
 
