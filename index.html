@@ -74,11 +74,11 @@
       </section>
 
       <section class="quick-stats home-stats" aria-label="Indicadores">
-        <div>
+        <div class="stat-action" role="button" tabindex="0" data-market-stat="home-top">
           <span>Item mas caro</span>
           <strong id="homeTopItem">-</strong>
         </div>
-        <div>
+        <div class="stat-action" role="button" tabindex="0" data-market-stat="home-trend">
           <span>Mejor tendencia</span>
           <strong id="homeBestTrend">-</strong>
         </div>
@@ -132,6 +132,7 @@
           <span>Buscar</span>
           <input id="marketSearch" type="search" placeholder="Buscar producto...">
         </label>
+        <button id="favoritesFilterBtn" class="filter-btn favorite-filter-btn" type="button">Favoritos</button>
         <button id="refreshBtn" class="filter-btn" type="button">Actualizar</button>
       </section>
 
@@ -158,11 +159,11 @@
       </section>
 
       <section class="quick-stats" aria-label="Indicadores">
-        <div>
+        <div class="stat-action" role="button" tabindex="0" data-market-stat="top">
           <span>Item mas caro</span>
           <strong id="topItem">-</strong>
         </div>
-        <div>
+        <div class="stat-action" role="button" tabindex="0" data-market-stat="trend">
           <span>Mejor tendencia</span>
           <strong id="bestTrend">-</strong>
         </div>

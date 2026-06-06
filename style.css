@@ -4609,6 +4609,30 @@ select {
   min-width: 94px;
 }
 
+.stat-action {
+  cursor: pointer;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+.stat-action:hover,
+.stat-action:focus-visible {
+  border-color: rgba(92, 255, 82, 0.55);
+  box-shadow: 0 0 0 2px rgba(92, 255, 82, 0.12);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.favorite-filter-btn.active {
+  border-color: rgba(255, 216, 74, 0.6);
+  color: #ffd84a;
+  background: rgba(255, 216, 74, 0.12);
+}
+
+.market-row-highlight {
+  border-color: rgba(92, 255, 82, 0.9) !important;
+  box-shadow: 0 0 0 2px rgba(92, 255, 82, 0.18), 0 0 28px rgba(92, 255, 82, 0.16);
+}
+
 .tabs {
   display: none !important;
 }

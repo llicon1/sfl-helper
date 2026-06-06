@@ -536,7 +536,8 @@ const state = {
   profileBannerImage: localStorage.getItem("sflProfileBannerImage") || "",
   communityPosts: [],
   communityEditing: false,
-  favorites: new Set(["wood", "iron", "gold"]),
+  favorites: new Set(JSON.parse(localStorage.getItem("sflMarketFavorites") || '["wood","iron","gold"]')),
+  showFavoritesOnly: false,
   inventory: {
     wood: 120,
     stone: 80,
@@ -566,6 +567,7 @@ const goalGap = document.querySelector("#goalGap");
 const buildingSelect = document.querySelector("#buildingSelect");
 const recipeBreakdown = document.querySelector("#recipeBreakdown");
 const refreshBtn = document.querySelector("#refreshBtn");
+const favoritesFilterBtn = document.querySelector("#favoritesFilterBtn");
 const lastUpdated = document.querySelector("#lastUpdated");
 const buildTime = document.querySelector("#buildTime");
 const buildXp = document.querySelector("#buildXp");
@@ -730,6 +732,20 @@ function formatCompactNumber(value) {
 
 function getItem(itemId) {
   return marketItems.find((item) => item.id === itemId);
+}
+
+function saveFavorites() {
+  localStorage.setItem("sflMarketFavorites", JSON.stringify([...state.favorites]));
+}
+
+function getMostExpensiveMarketItem() {
+  return [...marketItems].sort((a, b) => b.price - a.price)[0] || null;
+}
+
+function getBestTrendMarketItem() {
+  return marketItems
+    .filter((item) => Number.isFinite(item.trend))
+    .sort((a, b) => b.trend - a.trend)[0] || null;
 }
 
 function t(es, en) {
@@ -2733,6 +2749,7 @@ function renderMarket() {
 
   marketItems
     .filter((item) => `${item.name} ${item.esName}`.toLowerCase().includes(query))
+    .filter((item) => !state.showFavoritesOnly || state.favorites.has(item.id))
     .forEach((item) => {
       const quantity = state.quantities[item.id] || "";
       const subtotal = (state.quantities[item.id] || 0) * item.price;
@@ -2749,7 +2766,7 @@ function renderMarket() {
         <div class="product-cell">
           <img src="${item.icon}" alt="${item.name}">
           <div>
-            <button class="star-btn ${isFavorite ? "active" : ""}" type="button" data-favorite-id="${item.id}" aria-label="Favorito ${itemLabel(item)}">${isFavorite ? "★" : "☆"}</button>
+            <button class="star-btn ${isFavorite ? "active" : ""}" type="button" data-favorite-id="${item.id}" aria-label="Favorito ${itemLabel(item)}">${isFavorite ? "&#9733;" : "&#9734;"}</button>
             <strong>${itemLabel(item)}</strong>
           </div>
         </div>
@@ -2770,22 +2787,26 @@ function renderMarket() {
 }
 
 function renderMarketStats() {
-  const mostExpensive = [...marketItems].sort((a, b) => b.price - a.price)[0];
-  const trendedItems = marketItems.filter((item) => Number.isFinite(item.trend));
-  const best = trendedItems.sort((a, b) => b.trend - a.trend)[0];
+  const mostExpensive = getMostExpensiveMarketItem();
+  const best = getBestTrendMarketItem();
   const activeCount = marketItems.filter((item) => (state.quantities[item.id] || 0) > 0).length;
 
   topItem.textContent = mostExpensive ? `${itemLabel(mostExpensive)} ${formatMarketNumber(mostExpensive.price)} F` : "-";
   bestTrend.textContent = best ? `${itemLabel(best)} ${best.trend >= 0 ? "+" : ""}${best.trend.toFixed(2)}%` : "-";
   activeItems.textContent = t(`${activeCount} activos / ${state.favorites.size} fav`, `${activeCount} active / ${state.favorites.size} fav`);
+  if (favoritesFilterBtn) {
+    favoritesFilterBtn.classList.toggle("active", state.showFavoritesOnly);
+    favoritesFilterBtn.textContent = state.showFavoritesOnly
+      ? t(`Favoritos (${state.favorites.size})`, `Favorites (${state.favorites.size})`)
+      : t("Favoritos", "Favorites");
+  }
   renderHomeMarketSummary();
 }
 
 function renderHomeMarketSummary() {
   if (!homeTopItem) return;
-  const mostExpensive = [...marketItems].sort((a, b) => b.price - a.price)[0];
-  const trendedItems = marketItems.filter((item) => Number.isFinite(item.trend));
-  const best = trendedItems.sort((a, b) => b.trend - a.trend)[0];
+  const mostExpensive = getMostExpensiveMarketItem();
+  const best = getBestTrendMarketItem();
   const activeCount = marketItems.filter((item) => (state.quantities[item.id] || 0) > 0).length;
   const total = calculateCartTotal();
 
@@ -2925,6 +2946,35 @@ function focusGoalResourcesInMarket() {
   setActiveScreen("market");
 }
 
+function showMarketItem(item) {
+  if (!item) return;
+  state.showFavoritesOnly = false;
+  searchInput.value = itemLabel(item);
+  renderMarket();
+  renderMarketStats();
+  setActiveScreen("market");
+
+  window.setTimeout(() => {
+    const row = marketList.querySelector(`[data-asset-id="${item.id}"]`);
+    if (!row) return;
+    row.scrollIntoView({ behavior: "smooth", block: "center" });
+    row.classList.add("market-row-highlight");
+    window.setTimeout(() => row.classList.remove("market-row-highlight"), 1400);
+    openAssetDetail("resource", item.id);
+  }, 120);
+}
+
+function handleMarketStatAction(statKey) {
+  if (statKey === "top" || statKey === "home-top") {
+    showMarketItem(getMostExpensiveMarketItem());
+    return;
+  }
+
+  if (statKey === "trend" || statKey === "home-trend") {
+    showMarketItem(getBestTrendMarketItem());
+  }
+}
+
 function renderSummary() {
   const total = calculateCartTotal();
 
@@ -2989,8 +3039,27 @@ marketList.addEventListener("click", (event) => {
     state.favorites.add(itemId);
   }
 
+  saveFavorites();
   renderMarket();
   renderMarketStats();
+});
+
+if (favoritesFilterBtn) {
+  favoritesFilterBtn.addEventListener("click", () => {
+    state.showFavoritesOnly = !state.showFavoritesOnly;
+    renderMarket();
+    renderMarketStats();
+  });
+}
+
+document.querySelectorAll("[data-market-stat]").forEach((statCard) => {
+  statCard.addEventListener("click", () => handleMarketStatAction(statCard.dataset.marketStat));
+  statCard.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      handleMarketStatAction(statCard.dataset.marketStat);
+    }
+  });
 });
 
 nftMarketList.addEventListener("click", (event) => {
