@@ -3285,6 +3285,112 @@ button.social-stat:hover {
   text-align: right;
 }
 
+.favorites-card {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding: 10px;
+  border: 1px solid rgba(255, 216, 74, 0.28);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(255, 216, 74, 0.08), transparent 46%),
+    rgba(255, 255, 255, 0.028);
+}
+
+.favorites-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.favorites-card-head span {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.favorites-card-head strong {
+  color: #ffd84a;
+  font-size: 15px;
+}
+
+.favorites-card-head button {
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 216, 74, 0.35);
+  border-radius: 8px;
+  background: rgba(255, 216, 74, 0.08);
+  color: #ffd84a;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.favorites-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.favorite-chip {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  min-height: 52px;
+  padding: 7px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: rgba(12, 20, 29, 0.9);
+  color: var(--text);
+  text-align: left;
+}
+
+.favorite-chip img {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.favorite-chip strong,
+.favorite-chip small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.favorite-chip strong {
+  font-size: 12px;
+}
+
+.favorite-chip small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.favorite-chip em {
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.favorites-empty {
+  grid-column: 1 / -1;
+  padding: 10px;
+  border: 1px dashed rgba(255, 216, 74, 0.28);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+
 .quick-stats div {
   min-height: 56px;
   padding: 9px;

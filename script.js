@@ -568,6 +568,9 @@ const buildingSelect = document.querySelector("#buildingSelect");
 const recipeBreakdown = document.querySelector("#recipeBreakdown");
 const refreshBtn = document.querySelector("#refreshBtn");
 const favoritesFilterBtn = document.querySelector("#favoritesFilterBtn");
+const favoritesTitle = document.querySelector("#favoritesTitle");
+const favoritesList = document.querySelector("#favoritesList");
+const clearFavoritesBtn = document.querySelector("#clearFavoritesBtn");
 const lastUpdated = document.querySelector("#lastUpdated");
 const buildTime = document.querySelector("#buildTime");
 const buildXp = document.querySelector("#buildXp");
@@ -2784,6 +2787,46 @@ function renderMarket() {
 
       marketList.appendChild(card);
     });
+
+  renderFavoriteMarketSection();
+}
+
+function renderFavoriteMarketSection() {
+  if (!favoritesList) return;
+
+  const favoriteItems = [...state.favorites]
+    .map((itemId) => getItem(itemId))
+    .filter(Boolean);
+
+  if (favoritesTitle) {
+    favoritesTitle.textContent = favoriteItems.length
+      ? t(`${favoriteItems.length} favoritos guardados`, `${favoriteItems.length} saved favorites`)
+      : t("Sin favoritos todavia", "No favorites yet");
+  }
+
+  if (!favoriteItems.length) {
+    favoritesList.innerHTML = `
+      <div class="favorites-empty">
+        ${t("Toca la estrella de un item para guardarlo aqui.", "Tap an item's star to save it here.")}
+      </div>
+    `;
+    return;
+  }
+
+  favoritesList.innerHTML = favoriteItems.map((item) => {
+    const trend = Number.isFinite(item.trend) ? item.trend : 0;
+    const trendClass = trend >= 0 ? "up" : "down";
+    return `
+      <button class="favorite-chip" type="button" data-favorite-open="${item.id}">
+        <img src="${item.icon}" alt="${item.name}">
+        <span>
+          <strong>${itemLabel(item)}</strong>
+          <small>${formatMarketNumber(item.price)} F</small>
+        </span>
+        <em class="${trendClass}">${trend >= 0 ? "+" : ""}${trend.toFixed(2)}%</em>
+      </button>
+    `;
+  }).join("");
 }
 
 function renderMarketStats() {
@@ -3043,6 +3086,24 @@ marketList.addEventListener("click", (event) => {
   renderMarket();
   renderMarketStats();
 });
+
+if (favoritesList) {
+  favoritesList.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-favorite-open]");
+    if (!button) return;
+    showMarketItem(getItem(button.dataset.favoriteOpen));
+  });
+}
+
+if (clearFavoritesBtn) {
+  clearFavoritesBtn.addEventListener("click", () => {
+    state.favorites.clear();
+    state.showFavoritesOnly = false;
+    saveFavorites();
+    renderMarket();
+    renderMarketStats();
+  });
+}
 
 if (favoritesFilterBtn) {
   favoritesFilterBtn.addEventListener("click", () => {
