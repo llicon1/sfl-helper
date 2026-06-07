@@ -535,6 +535,8 @@ const state = {
   profileBanner: localStorage.getItem("sflProfileBanner") || "night",
   profileBannerImage: localStorage.getItem("sflProfileBannerImage") || "",
   communityPosts: [],
+  socialPosts: [],
+  socialMediaDraft: null,
   communityEditing: false,
   favorites: new Set(JSON.parse(localStorage.getItem("sflMarketFavorites") || '["wood","iron","gold"]')),
   showFavoritesOnly: false,
@@ -688,6 +690,19 @@ const homeBestTrend = document.querySelector("#homeBestTrend");
 const homeActiveItems = document.querySelector("#homeActiveItems");
 const homeSummaryTitle = document.querySelector("#homeSummaryTitle");
 const homeSummaryText = document.querySelector("#homeSummaryText");
+const homeComposerEyebrow = document.querySelector("#homeComposerEyebrow");
+const homeComposerTitle = document.querySelector("#homeComposerTitle");
+const homeComposerAvatar = document.querySelector("#homeComposerAvatar");
+const homePostText = document.querySelector("#homePostText");
+const homeMediaBtn = document.querySelector("#homeMediaBtn");
+const homeMediaInput = document.querySelector("#homeMediaInput");
+const homeMediaPreview = document.querySelector("#homeMediaPreview");
+const homePublishBtn = document.querySelector("#homePublishBtn");
+const homePostStatus = document.querySelector("#homePostStatus");
+const homeFeedRefreshBtn = document.querySelector("#homeFeedRefreshBtn");
+const homeFeedEyebrow = document.querySelector("#homeFeedEyebrow");
+const homeFeedTitle = document.querySelector("#homeFeedTitle");
+const homeFeedList = document.querySelector("#homeFeedList");
 const marketSource = document.querySelector("#marketSource");
 const marketStatus = document.querySelector("#marketStatus");
 const assetDetailPanel = document.querySelector("#assetDetailPanel");
@@ -753,6 +768,15 @@ function getBestTrendMarketItem() {
 
 function t(es, en) {
   return state.language === "es" ? es : en;
+}
+
+function escapeHtml(value = "") {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 function itemLabel(item) {
@@ -1278,12 +1302,14 @@ function renderFarmProfile() {
   renderFarmDashboard();
   renderCommunityConnectedFarm();
   renderHomeDashboard();
+  renderHomeSocialFeed();
 }
 
 function renderHomeDashboard() {
   if (!homeBalance) return;
   const balances = Object.entries(state.farmBalances || {})
     .filter(([, value]) => Number.isFinite(Number(value)));
+  if (homeComposerAvatar) homeComposerAvatar.src = getProfileAvatar().src;
   homeBalance.textContent = formatFlower(Number(state.balance) || 0, true);
   homeBalanceHint.textContent = state.farmId
     ? t("Balance leido desde los datos publicos disponibles.", "Balance read from available public data.")
@@ -1298,6 +1324,220 @@ function renderHomeDashboard() {
     .join("");
   updateFlowerUsdDisplays();
   renderHomeMarketSummary();
+}
+
+function normalizeSocialPostClient(post = {}) {
+  return {
+    id: String(post.id || Date.now()),
+    farmId: String(post.farmId || ""),
+    nickname: post.nickname || (post.farmId ? `Farm #${post.farmId}` : t("Granjero", "Farmer")),
+    avatar: post.avatar || getProfileAvatar().src,
+    message: String(post.message || "").trim(),
+    mediaType: post.mediaType || "",
+    mediaData: post.mediaData || "",
+    likes: Number(post.likes) || 0,
+    likedBy: Array.isArray(post.likedBy) ? post.likedBy : [],
+    comments: Array.isArray(post.comments) ? post.comments : [],
+    createdAt: post.createdAt || new Date().toISOString()
+  };
+}
+
+function getSocialClientId() {
+  return getCommunityClientId();
+}
+
+function renderHomeMediaPreview() {
+  if (!homeMediaPreview) return;
+  const draft = state.socialMediaDraft;
+  homeMediaPreview.classList.toggle("hidden", !draft);
+  if (!draft) {
+    homeMediaPreview.innerHTML = "";
+    return;
+  }
+  const media = draft.type === "video"
+    ? `<video src="${draft.data}" controls muted playsinline></video>`
+    : `<img src="${draft.data}" alt="${t("Vista previa", "Preview")}">`;
+  homeMediaPreview.innerHTML = `
+    ${media}
+    <button type="button" data-remove-home-media>${t("Quitar", "Remove")}</button>
+  `;
+}
+
+function renderSocialMedia(post) {
+  if (!post.mediaData) return "";
+  if (post.mediaType === "video") {
+    return `<video class="home-post-media" src="${post.mediaData}" controls playsinline></video>`;
+  }
+  return `<img class="home-post-media" src="${post.mediaData}" alt="${t("Imagen publicada", "Posted image")}">`;
+}
+
+function renderHomeSocialFeed() {
+  if (!homeFeedList) return;
+  const posts = (state.socialPosts || []).map(normalizeSocialPostClient);
+  if (!posts.length) {
+    homeFeedList.innerHTML = `
+      <article class="home-feed-empty">
+        <strong>${t("Aun no hay publicaciones.", "No posts yet.")}</strong>
+        <p>${t("Se el primero en compartir algo con la comunidad.", "Be the first to share something with the community.")}</p>
+      </article>
+    `;
+    return;
+  }
+
+  homeFeedList.innerHTML = posts.map((post) => {
+    const liked = post.likedBy.includes(getSocialClientId());
+    const comments = post.comments.slice(-3).map((comment) => `
+      <div class="home-comment">
+        <b>${escapeHtml(comment.nickname || t("Granjero", "Farmer"))}</b>
+        <span>${escapeHtml(comment.message || "")}</span>
+      </div>
+    `).join("");
+    return `
+      <article class="home-post" data-social-post="${post.id}">
+        <header>
+          <img src="${post.avatar}" alt="${escapeHtml(post.nickname)}">
+          <div>
+            <strong>${escapeHtml(post.nickname)}</strong>
+            <span>Farm ${escapeHtml(post.farmId || "-")} - ${relativeTimeLabel(post.createdAt)}</span>
+          </div>
+        </header>
+        ${post.message ? `<p>${escapeHtml(post.message)}</p>` : ""}
+        ${renderSocialMedia(post)}
+        <div class="home-post-actions">
+          <button type="button" class="${liked ? "liked" : ""}" data-social-like="${post.id}">${t("Me gusta", "Like")} ${post.likes || post.likedBy.length}</button>
+          <button type="button" data-social-focus-comment="${post.id}">${t("Comentar", "Comment")} ${post.comments.length}</button>
+          ${post.farmId ? `<a href="https://sunflower-land.com/play/#/visit/${encodeURIComponent(post.farmId)}" target="_blank" rel="noreferrer">Visitar</a>` : ""}
+        </div>
+        <div class="home-comments">${comments}</div>
+        <form class="home-comment-form" data-social-comment="${post.id}">
+          <input type="text" maxlength="180" placeholder="${t("Responder...", "Reply...")}">
+          <button type="submit">${t("Enviar", "Send")}</button>
+        </form>
+      </article>
+    `;
+  }).join("");
+}
+
+async function loadSocialPosts() {
+  if (homeFeedRefreshBtn) homeFeedRefreshBtn.disabled = true;
+  try {
+    const response = await fetch(`${localApiBase}/api/social`, { cache: "no-store" });
+    if (!response.ok) throw new Error("Social API failed");
+    const data = await response.json();
+    state.socialPosts = Array.isArray(data.posts) ? data.posts.map(normalizeSocialPostClient) : [];
+    localStorage.setItem("sflSocialPosts", JSON.stringify(state.socialPosts));
+    if (homePostStatus) homePostStatus.textContent = t("Feed actualizado.", "Feed updated.");
+  } catch {
+    state.socialPosts = JSON.parse(localStorage.getItem("sflSocialPosts") || "[]").map(normalizeSocialPostClient);
+    if (homePostStatus) homePostStatus.textContent = t("Modo local: no pude leer el feed compartido.", "Local mode: could not read the shared feed.");
+  } finally {
+    if (homeFeedRefreshBtn) homeFeedRefreshBtn.disabled = false;
+    renderHomeSocialFeed();
+  }
+}
+
+async function publishHomeSocialPost() {
+  const message = (homePostText?.value || "").trim();
+  if (!message && !state.socialMediaDraft) {
+    if (homePostStatus) homePostStatus.textContent = t("Escribe algo o agrega una foto/video.", "Write something or add a photo/video.");
+    return;
+  }
+
+  const farmId = state.farmId && state.farmId !== "demo" ? state.farmId : "";
+  const payload = {
+    farmId,
+    nickname: state.profileName || state.farmName || (farmId ? `Farm #${farmId}` : t("Granjero", "Farmer")),
+    avatar: getProfileAvatar().src,
+    message,
+    mediaType: state.socialMediaDraft?.type || "",
+    mediaData: state.socialMediaDraft?.data || ""
+  };
+
+  if (homePublishBtn) homePublishBtn.disabled = true;
+  if (homePostStatus) homePostStatus.textContent = t("Publicando...", "Posting...");
+  try {
+    const response = await fetch(`${localApiBase}/api/social`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) throw new Error(await response.text());
+    const data = await response.json();
+    state.socialPosts = Array.isArray(data.posts) ? data.posts.map(normalizeSocialPostClient) : state.socialPosts;
+    localStorage.setItem("sflSocialPosts", JSON.stringify(state.socialPosts));
+    if (homePostStatus) homePostStatus.textContent = t("Publicado en Inicio.", "Posted to Home.");
+  } catch (error) {
+    const post = normalizeSocialPostClient({
+      id: `${Date.now()}`,
+      ...payload,
+      likedBy: [],
+      comments: [],
+      createdAt: new Date().toISOString()
+    });
+    state.socialPosts = [post, ...state.socialPosts].slice(0, 80);
+    localStorage.setItem("sflSocialPosts", JSON.stringify(state.socialPosts));
+    if (homePostStatus) homePostStatus.textContent = t(`Publicado localmente. ${error.message || ""}`, `Posted locally. ${error.message || ""}`);
+  } finally {
+    if (homePublishBtn) homePublishBtn.disabled = false;
+    if (homePostText) homePostText.value = "";
+    state.socialMediaDraft = null;
+    renderHomeMediaPreview();
+    renderHomeSocialFeed();
+  }
+}
+
+async function toggleSocialPostLike(postId) {
+  const likerId = getSocialClientId();
+  const post = state.socialPosts.find((entry) => entry.id === postId);
+  if (!post) return;
+  try {
+    const response = await fetch(`${localApiBase}/api/social/like`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ postId, likerId })
+    });
+    if (!response.ok) throw new Error("Like failed");
+    const data = await response.json();
+    state.socialPosts = Array.isArray(data.posts) ? data.posts.map(normalizeSocialPostClient) : state.socialPosts;
+  } catch {
+    post.likedBy = Array.isArray(post.likedBy) ? post.likedBy : [];
+    post.likedBy = post.likedBy.includes(likerId)
+      ? post.likedBy.filter((entry) => entry !== likerId)
+      : [...post.likedBy, likerId];
+    post.likes = post.likedBy.length;
+  }
+  localStorage.setItem("sflSocialPosts", JSON.stringify(state.socialPosts));
+  renderHomeSocialFeed();
+}
+
+async function addSocialComment(postId, message) {
+  const cleanMessage = String(message || "").trim();
+  if (!cleanMessage) return;
+  const post = state.socialPosts.find((entry) => entry.id === postId);
+  if (!post) return;
+  const comment = {
+    id: `${Date.now()}`,
+    farmId: state.farmId || "",
+    nickname: state.profileName || state.farmName || t("Granjero", "Farmer"),
+    avatar: getProfileAvatar().src,
+    message: cleanMessage,
+    createdAt: new Date().toISOString()
+  };
+  try {
+    const response = await fetch(`${localApiBase}/api/social/comment`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ postId, comment })
+    });
+    if (!response.ok) throw new Error("Comment failed");
+    const data = await response.json();
+    state.socialPosts = Array.isArray(data.posts) ? data.posts.map(normalizeSocialPostClient) : state.socialPosts;
+  } catch {
+    post.comments = Array.isArray(post.comments) ? post.comments : [];
+    post.comments.push(comment);
+  }
+  localStorage.setItem("sflSocialPosts", JSON.stringify(state.socialPosts));
+  renderHomeSocialFeed();
 }
 
 function renderFarmDashboard() {
@@ -2615,6 +2855,17 @@ function renderTranslations() {
     "Marca cantidades en Market y compara tu balance antes de comprar.",
     "Set Market quantities and compare against your balance before buying."
   );
+  if (homeComposerEyebrow) homeComposerEyebrow.textContent = t("Mural de granjeros", "Farmer wall");
+  if (homeComposerTitle) homeComposerTitle.textContent = t("¿Que esta pasando en tu granja?", "What is happening on your farm?");
+  if (homePostText) homePostText.placeholder = t(
+    "Comparte estado, venta, logro, foto o video corto...",
+    "Share a status, sale, achievement, photo or short video..."
+  );
+  if (homeMediaBtn) homeMediaBtn.textContent = t("Foto / video", "Photo / video");
+  if (homePublishBtn) homePublishBtn.textContent = t("Publicar", "Post");
+  if (homeFeedEyebrow) homeFeedEyebrow.textContent = "Feed";
+  if (homeFeedTitle) homeFeedTitle.textContent = t("Lo ultimo de la comunidad", "Latest from the community");
+  if (homeFeedRefreshBtn) homeFeedRefreshBtn.textContent = t("Actualizar", "Refresh");
 
   document.querySelector(".farm-phone .upgrade-header h2").textContent = t("Mi granja", "My farm");
   document.querySelector("#farmDashboardLabel").textContent = "Farm ID";
@@ -3197,9 +3448,61 @@ languageButtons.forEach((button) => {
     renderFarmProfile();
     renderMarket();
     renderCommunityPosts();
+    renderHomeSocialFeed();
     renderSummary();
   });
 });
+
+if (homeMediaBtn && homeMediaInput) {
+  homeMediaBtn.addEventListener("click", () => homeMediaInput.click());
+  homeMediaInput.addEventListener("change", async () => {
+    const file = homeMediaInput.files?.[0];
+    if (!file) return;
+    if (file.size > 1_500_000) {
+      homePostStatus.textContent = t("Archivo muy grande. Usa una foto/video menor a 1.5 MB.", "File too large. Use a photo/video under 1.5 MB.");
+      homeMediaInput.value = "";
+      return;
+    }
+    const type = /^video\//.test(file.type || "") ? "video" : "image";
+    state.socialMediaDraft = { type, data: await readFileAsDataUrl(file) };
+    homeMediaInput.value = "";
+    renderHomeMediaPreview();
+  });
+}
+
+if (homeMediaPreview) {
+  homeMediaPreview.addEventListener("click", (event) => {
+    if (!event.target.closest("[data-remove-home-media]")) return;
+    state.socialMediaDraft = null;
+    renderHomeMediaPreview();
+  });
+}
+
+if (homePublishBtn) homePublishBtn.addEventListener("click", publishHomeSocialPost);
+if (homeFeedRefreshBtn) homeFeedRefreshBtn.addEventListener("click", loadSocialPosts);
+if (homeFeedList) {
+  homeFeedList.addEventListener("click", (event) => {
+    const likeButton = event.target.closest("[data-social-like]");
+    if (likeButton) {
+      toggleSocialPostLike(likeButton.dataset.socialLike);
+      return;
+    }
+    const commentButton = event.target.closest("[data-social-focus-comment]");
+    if (commentButton) {
+      const card = commentButton.closest("[data-social-post]");
+      card?.querySelector(".home-comment-form input")?.focus();
+    }
+  });
+  homeFeedList.addEventListener("submit", (event) => {
+    const form = event.target.closest("[data-social-comment]");
+    if (!form) return;
+    event.preventDefault();
+    const input = form.querySelector("input");
+    const value = input?.value || "";
+    input.value = "";
+    addSocialComment(form.dataset.socialComment, value);
+  });
+}
 
 loadFarmBtn.addEventListener("click", loadFarmById);
 
@@ -3364,6 +3667,7 @@ settingsLanguageBtn.addEventListener("click", () => {
   renderFarmProfile();
   renderMarket();
   renderCommunityPosts();
+  renderHomeSocialFeed();
   renderSummary();
   settingsStatus.textContent = t("Idioma actualizado.", "Language updated.");
 });
@@ -3390,6 +3694,7 @@ async function autoRefreshConnectedAccount() {
       loadRemoteFarmProfile(),
       refreshMarketData(),
       loadCommunityPosts(),
+      loadSocialPosts(),
       loadNftMarket()
     ]);
     settingsStatus.textContent = t("Datos actualizados automaticamente.", "Data refreshed automatically.");
@@ -3423,6 +3728,7 @@ renderFarmProfile();
 renderMarket();
 renderSummary();
 loadCommunityPosts();
+loadSocialPosts();
 refreshMarketData();
 loadNftMarket();
 trackAppVisit();

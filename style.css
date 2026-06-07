@@ -4710,6 +4710,234 @@ select {
   margin-top: 12px;
 }
 
+.home-social-composer,
+.home-feed-card {
+  margin-top: 12px;
+  border: 1px solid rgba(118, 255, 92, 0.18);
+  background:
+    radial-gradient(circle at top left, rgba(79, 255, 82, 0.1), transparent 32%),
+    rgba(15, 24, 34, 0.9);
+  border-radius: 16px;
+  padding: 14px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.24);
+}
+
+.composer-head,
+.home-post header,
+.feed-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.composer-head img,
+.home-post header img {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(118, 255, 92, 0.45);
+}
+
+.composer-head span,
+.feed-title-row span {
+  display: block;
+  color: var(--green);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.composer-head strong {
+  color: var(--text);
+  font-size: 17px;
+}
+
+.home-social-composer textarea {
+  width: 100%;
+  margin-top: 12px;
+  resize: vertical;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(7, 12, 19, 0.72);
+  color: var(--text);
+  padding: 13px;
+  font: inherit;
+  min-height: 92px;
+}
+
+.composer-actions,
+.home-post-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.composer-actions button,
+.feed-title-row button,
+.home-comment-form button {
+  border: 1px solid rgba(118, 255, 92, 0.5);
+  border-radius: 12px;
+  background: rgba(28, 196, 67, 0.14);
+  color: var(--green);
+  font-weight: 900;
+  padding: 11px 14px;
+}
+
+.composer-actions button:last-child {
+  margin-left: auto;
+  background: linear-gradient(180deg, #58ee62, #24bd42);
+  border-color: transparent;
+  color: #06220d;
+}
+
+.home-media-preview {
+  position: relative;
+  margin-top: 12px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.home-media-preview img,
+.home-media-preview video,
+.home-post-media {
+  display: block;
+  width: 100%;
+  max-height: 360px;
+  object-fit: cover;
+  background: #05080d;
+}
+
+.home-media-preview button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  border: 0;
+  border-radius: 999px;
+  padding: 8px 10px;
+  background: rgba(0, 0, 0, 0.68);
+  color: #fff;
+  font-weight: 900;
+}
+
+.home-post-status {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.feed-title-row {
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.feed-title-row h2 {
+  margin: 2px 0 0;
+  font-size: 20px;
+}
+
+.home-feed-list {
+  display: grid;
+  gap: 12px;
+}
+
+.home-post,
+.home-feed-empty {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: rgba(12, 20, 30, 0.86);
+  padding: 14px;
+}
+
+.home-post header div {
+  min-width: 0;
+}
+
+.home-post header strong {
+  display: block;
+  color: var(--text);
+  font-size: 15px;
+}
+
+.home-post header span,
+.home-feed-empty p {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.home-post p {
+  margin: 12px 0;
+  color: #eaf4ff;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.home-post-media {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  margin-top: 10px;
+}
+
+.home-post-actions {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 10px;
+}
+
+.home-post-actions button,
+.home-post-actions a {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 900;
+  text-decoration: none;
+  padding: 8px 10px;
+  border-radius: 999px;
+}
+
+.home-post-actions button:hover,
+.home-post-actions a:hover,
+.home-post-actions button.liked {
+  color: var(--green);
+  background: rgba(118, 255, 92, 0.1);
+}
+
+.home-comments {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.home-comment {
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 9px 10px;
+  color: #dbe8f8;
+}
+
+.home-comment b {
+  margin-right: 6px;
+  color: #fff;
+}
+
+.home-comment-form {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.home-comment-form input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(7, 12, 19, 0.72);
+  color: var(--text);
+  padding: 10px 12px;
+}
+
 .home-summary-card button,
 .home-farm-card .farm-profile-actions button {
   min-width: 94px;

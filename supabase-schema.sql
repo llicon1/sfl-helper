@@ -107,3 +107,43 @@ create policy "app_visits_insert_public"
 on public.app_visits for insert
 to anon
 with check (true);
+
+create table if not exists public.social_posts (
+  id text primary key,
+  farm_id text not null default '',
+  nickname text not null default '',
+  avatar text not null default '',
+  message text not null default '',
+  media_type text not null default '',
+  media_data text not null default '',
+  likes integer not null default 0,
+  liked_by text[] not null default '{}',
+  comments jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz
+);
+
+create index if not exists social_posts_created_at_idx
+on public.social_posts (created_at desc);
+
+alter table public.social_posts enable row level security;
+
+drop policy if exists "social_posts_select_public" on public.social_posts;
+drop policy if exists "social_posts_insert_public" on public.social_posts;
+drop policy if exists "social_posts_update_public" on public.social_posts;
+
+create policy "social_posts_select_public"
+on public.social_posts for select
+to anon
+using (true);
+
+create policy "social_posts_insert_public"
+on public.social_posts for insert
+to anon
+with check (true);
+
+create policy "social_posts_update_public"
+on public.social_posts for update
+to anon
+using (true)
+with check (true);

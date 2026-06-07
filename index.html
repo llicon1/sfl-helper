@@ -97,6 +97,35 @@
         <button type="button" data-view="market">Ver market</button>
       </section>
 
+      <section class="home-social-composer" aria-label="Publicar en inicio">
+        <div class="composer-head">
+          <img id="homeComposerAvatar" src="sfl-app-imagen/farmer-h.png" alt="Avatar">
+          <div>
+            <span id="homeComposerEyebrow">Mural de granjeros</span>
+            <strong id="homeComposerTitle">¿Que esta pasando en tu granja?</strong>
+          </div>
+        </div>
+        <textarea id="homePostText" rows="3" maxlength="420" placeholder="Comparte estado, venta, logro, foto o video corto..."></textarea>
+        <div id="homeMediaPreview" class="home-media-preview hidden"></div>
+        <div class="composer-actions">
+          <button id="homeMediaBtn" type="button">Foto / video</button>
+          <button id="homePublishBtn" type="button">Publicar</button>
+        </div>
+        <input id="homeMediaInput" type="file" accept="image/*,video/*" hidden>
+        <p id="homePostStatus" class="home-post-status">Las publicaciones aparecen para todos cuando Supabase esta conectado.</p>
+      </section>
+
+      <section class="home-feed-card" aria-label="Feed social">
+        <div class="feed-title-row">
+          <div>
+            <span id="homeFeedEyebrow">Feed</span>
+            <h2 id="homeFeedTitle">Lo ultimo de la comunidad</h2>
+          </div>
+          <button id="homeFeedRefreshBtn" type="button">Actualizar</button>
+        </div>
+        <div id="homeFeedList" class="home-feed-list"></div>
+      </section>
+
       <nav class="bottom-nav" aria-label="Navegacion principal">
         <button class="active" type="button" data-view="home">Inicio</button>
         <button type="button" data-view="market">Market</button>

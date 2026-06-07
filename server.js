@@ -17,6 +17,9 @@ const COMMUNITY_SEED_FILE = path.join(ROOT, "community-posts.json");
 const COMMUNITY_FILE = process.env.VERCEL
   ? path.join(os.tmpdir(), "sfl-market-community-posts.json")
   : COMMUNITY_SEED_FILE;
+const SOCIAL_FILE = process.env.VERCEL
+  ? path.join(os.tmpdir(), "sfl-market-social-posts.json")
+  : path.join(ROOT, "social-posts.json");
 const PROFILE_FILE = process.env.VERCEL
   ? path.join(os.tmpdir(), "sfl-market-farm-profiles.json")
   : path.join(ROOT, "farm-profiles.json");
@@ -113,7 +116,7 @@ function readJsonBody(req) {
     let body = "";
     req.on("data", (chunk) => {
       body += chunk;
-      if (body.length > 2_000_000) {
+      if (body.length > 3_000_000) {
         req.destroy();
         reject(new Error("Request body too large"));
       }
@@ -239,6 +242,118 @@ function dbToPost(row = {}) {
     createdAt: row.created_at,
     updatedAt: row.updated_at
   });
+}
+
+function normalizeSocialComment(comment = {}) {
+  return {
+    id: cleanText(comment.id || `${Date.now()}`, 40),
+    farmId: cleanText(comment.farmId || comment.farm_id || "", 24).replace(/[^0-9]/g, ""),
+    nickname: cleanText(comment.nickname || "", 32),
+    avatar: cleanText(comment.avatar || "", 160),
+    message: cleanText(comment.message || "", 180),
+    createdAt: comment.createdAt || comment.created_at || new Date().toISOString()
+  };
+}
+
+function normalizeSocialPost(post = {}) {
+  const likedBy = Array.isArray(post.likedBy)
+    ? post.likedBy.map((value) => cleanText(value, 80)).filter(Boolean)
+    : [];
+  const comments = Array.isArray(post.comments)
+    ? post.comments.map(normalizeSocialComment).filter((comment) => comment.message)
+    : [];
+  const mediaType = cleanText(post.mediaType || post.media_type || "", 12);
+  const allowedMediaType = mediaType === "video" || mediaType === "image" ? mediaType : "";
+
+  return {
+    id: cleanText(post.id || `${Date.now()}-${Math.random().toString(16).slice(2)}`, 80),
+    farmId: cleanText(post.farmId || post.farm_id || "", 24).replace(/[^0-9]/g, ""),
+    nickname: cleanText(post.nickname || "", 32),
+    avatar: cleanText(post.avatar || "", 160),
+    message: cleanText(post.message || "", 420),
+    mediaType: allowedMediaType,
+    mediaData: allowedMediaType ? cleanText(post.mediaData || post.media_data || "", 1_500_000) : "",
+    likes: Math.max(Number(post.likes) || 0, likedBy.length),
+    likedBy,
+    comments: comments.slice(-60),
+    createdAt: post.createdAt || post.created_at || new Date().toISOString(),
+    updatedAt: post.updatedAt || post.updated_at || null
+  };
+}
+
+function socialPostToDb(post) {
+  return {
+    id: post.id,
+    farm_id: post.farmId,
+    nickname: post.nickname,
+    avatar: post.avatar,
+    message: post.message,
+    media_type: post.mediaType,
+    media_data: post.mediaData,
+    likes: post.likes,
+    liked_by: post.likedBy,
+    comments: post.comments,
+    created_at: post.createdAt,
+    updated_at: post.updatedAt || null
+  };
+}
+
+function dbToSocialPost(row = {}) {
+  return normalizeSocialPost({
+    id: row.id,
+    farmId: row.farm_id,
+    nickname: row.nickname,
+    avatar: row.avatar,
+    message: row.message,
+    mediaType: row.media_type,
+    mediaData: row.media_data,
+    likes: row.likes,
+    likedBy: row.liked_by,
+    comments: row.comments,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  });
+}
+
+function readSocialPosts() {
+  try {
+    const data = JSON.parse(fs.readFileSync(SOCIAL_FILE, "utf8"));
+    return Array.isArray(data.posts) ? data.posts.map(normalizeSocialPost) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeSocialPosts(posts) {
+  fs.writeFileSync(SOCIAL_FILE, `${JSON.stringify({ posts }, null, 2)}\n`);
+}
+
+async function readSocialPostsStore() {
+  if (!isSupabaseEnabled()) return readSocialPosts();
+  try {
+    const rows = await supabaseRequest("social_posts?select=*&order=created_at.desc&limit=120");
+    return Array.isArray(rows) ? rows.map(dbToSocialPost) : [];
+  } catch {
+    return readSocialPosts();
+  }
+}
+
+async function writeSocialPostsStore(posts) {
+  const normalized = posts.map(normalizeSocialPost).slice(0, 120);
+  writeSocialPosts(normalized);
+  if (!isSupabaseEnabled()) return normalized;
+  try {
+    const rows = normalized.map(socialPostToDb);
+    if (!rows.length) return normalized;
+    const result = await supabaseRequest("social_posts?on_conflict=id", {
+      method: "POST",
+      headers: { Prefer: "resolution=merge-duplicates,return=representation" },
+      body: JSON.stringify(rows)
+    });
+    return Array.isArray(result) ? result.map(dbToSocialPost) : normalized;
+  } catch {
+    return normalized;
+  }
 }
 
 function normalizeFarmProfile(profile = {}) {
@@ -603,6 +718,94 @@ async function handleAnalytics(req, res) {
   const payload = await readJsonBody(req);
   const counts = await recordAppVisit(payload.visitorId, req.headers["user-agent"] || "");
   send(res, 200, JSON.stringify(counts));
+}
+
+async function handleSocial(req, res) {
+  if (req.method === "GET") {
+    send(res, 200, JSON.stringify({ posts: await readSocialPostsStore() }));
+    return;
+  }
+
+  if (req.method !== "POST") {
+    send(res, 405, JSON.stringify({ error: "Method not allowed" }));
+    return;
+  }
+
+  const payload = await readJsonBody(req);
+  const post = normalizeSocialPost({
+    ...payload,
+    id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    likedBy: [],
+    comments: [],
+    likes: 0,
+    createdAt: new Date().toISOString()
+  });
+
+  if (!post.message && !post.mediaData) {
+    send(res, 400, JSON.stringify({ error: "Message or media required" }));
+    return;
+  }
+
+  const posts = [post, ...(await readSocialPostsStore())].slice(0, 120);
+  const saved = await writeSocialPostsStore(posts);
+  send(res, 201, JSON.stringify({ post, posts: saved }));
+}
+
+async function handleSocialLike(req, res) {
+  if (req.method !== "POST") {
+    send(res, 405, JSON.stringify({ error: "Method not allowed" }));
+    return;
+  }
+
+  const payload = await readJsonBody(req);
+  const postId = cleanText(payload.postId, 80);
+  const likerId = cleanText(payload.likerId, 80);
+  const posts = await readSocialPostsStore();
+  const post = posts.find((entry) => entry.id === postId);
+  if (!post || !likerId) {
+    send(res, 404, JSON.stringify({ error: "Post not found" }));
+    return;
+  }
+
+  post.likedBy = Array.isArray(post.likedBy) ? post.likedBy : [];
+  post.likedBy = post.likedBy.includes(likerId)
+    ? post.likedBy.filter((entry) => entry !== likerId)
+    : [...post.likedBy, likerId];
+  post.likes = post.likedBy.length;
+  post.updatedAt = new Date().toISOString();
+  send(res, 200, JSON.stringify({ posts: await writeSocialPostsStore(posts) }));
+}
+
+async function handleSocialComment(req, res) {
+  if (req.method !== "POST") {
+    send(res, 405, JSON.stringify({ error: "Method not allowed" }));
+    return;
+  }
+
+  const payload = await readJsonBody(req);
+  const postId = cleanText(payload.postId, 80);
+  const posts = await readSocialPostsStore();
+  const post = posts.find((entry) => entry.id === postId);
+  if (!post) {
+    send(res, 404, JSON.stringify({ error: "Post not found" }));
+    return;
+  }
+
+  const comment = normalizeSocialComment({
+    ...(payload.comment || {}),
+    id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    createdAt: new Date().toISOString()
+  });
+  if (!comment.message) {
+    send(res, 400, JSON.stringify({ error: "Comment required" }));
+    return;
+  }
+
+  post.comments = Array.isArray(post.comments) ? post.comments : [];
+  post.comments.push(comment);
+  post.comments = post.comments.slice(-60);
+  post.updatedAt = new Date().toISOString();
+  send(res, 200, JSON.stringify({ posts: await writeSocialPostsStore(posts) }));
 }
 
 async function handleCommunity(req, res) {
@@ -1248,6 +1451,21 @@ async function handleRequest(req, res) {
 
     if (req.url.startsWith("/api/analytics")) {
       await handleAnalytics(req, res);
+      return;
+    }
+
+    if (req.url.startsWith("/api/social/like")) {
+      await handleSocialLike(req, res);
+      return;
+    }
+
+    if (req.url.startsWith("/api/social/comment")) {
+      await handleSocialComment(req, res);
+      return;
+    }
+
+    if (req.url.startsWith("/api/social")) {
+      await handleSocial(req, res);
       return;
     }
 
