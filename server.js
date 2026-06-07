@@ -315,6 +315,58 @@ function dbToSocialPost(row = {}) {
   });
 }
 
+function socialPostToCommunityDb(post) {
+  return {
+    id: `social:${post.id}`,
+    farm_id: `social:${post.id}`,
+    nickname: post.nickname,
+    need: "social",
+    message: post.message,
+    visit_url: post.farmId,
+    avatar: post.avatar,
+    banner: "social",
+    banner_image: post.mediaData,
+    island: post.mediaType,
+    faction: "",
+    level: null,
+    visits: 0,
+    clean_count: 0,
+    cleaned_by: [],
+    likes: post.likes,
+    liked_by: post.likedBy,
+    visited_by: post.comments.map((comment) => JSON.stringify(comment)),
+    capacity: 6,
+    created_at: post.createdAt,
+    updated_at: post.updatedAt || null
+  };
+}
+
+function communityDbToSocialPost(row = {}) {
+  const comments = Array.isArray(row.visited_by)
+    ? row.visited_by.map((entry) => {
+      try {
+        return JSON.parse(entry);
+      } catch {
+        return null;
+      }
+    }).filter(Boolean)
+    : [];
+  return normalizeSocialPost({
+    id: String(row.id || "").replace(/^social:/, ""),
+    farmId: row.visit_url,
+    nickname: row.nickname,
+    avatar: row.avatar,
+    message: row.message,
+    mediaType: row.island,
+    mediaData: row.banner_image,
+    likes: row.likes,
+    likedBy: row.liked_by,
+    comments,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  });
+}
+
 function readSocialPosts() {
   try {
     const data = JSON.parse(fs.readFileSync(SOCIAL_FILE, "utf8"));
@@ -334,7 +386,12 @@ async function readSocialPostsStore() {
     const rows = await supabaseRequest("social_posts?select=*&order=created_at.desc&limit=120");
     return Array.isArray(rows) ? rows.map(dbToSocialPost) : [];
   } catch {
-    return readSocialPosts();
+    try {
+      const rows = await supabaseRequest("community_posts?select=*&need=eq.social&order=created_at.desc&limit=120");
+      return Array.isArray(rows) ? rows.map(communityDbToSocialPost) : [];
+    } catch {
+      return readSocialPosts();
+    }
   }
 }
 
@@ -352,7 +409,17 @@ async function writeSocialPostsStore(posts) {
     });
     return Array.isArray(result) ? result.map(dbToSocialPost) : normalized;
   } catch {
-    return normalized;
+    try {
+      const rows = normalized.map(socialPostToCommunityDb);
+      const result = await supabaseRequest("community_posts?on_conflict=farm_id", {
+        method: "POST",
+        headers: { Prefer: "resolution=merge-duplicates,return=representation" },
+        body: JSON.stringify(rows)
+      });
+      return Array.isArray(result) ? result.map(communityDbToSocialPost) : normalized;
+    } catch {
+      return normalized;
+    }
   }
 }
 
@@ -499,6 +566,7 @@ async function cleanupCommunityPostsStore() {
   if (!isSupabaseEnabled()) {
     const posts = readCommunityPosts();
     const activePosts = posts.filter((post) => {
+      if (post.need !== "clean") return true;
       const createdAt = new Date(post.createdAt || 0).getTime();
       return Number.isFinite(createdAt) && createdAt >= cutoff.getTime();
     });
@@ -506,7 +574,7 @@ async function cleanupCommunityPostsStore() {
     return activePosts;
   }
 
-  await supabaseRequest(`community_posts?created_at=lt.${encodeURIComponent(cutoff.toISOString())}`, {
+  await supabaseRequest(`community_posts?need=eq.clean&created_at=lt.${encodeURIComponent(cutoff.toISOString())}`, {
     method: "DELETE"
   });
   return null;
@@ -514,8 +582,8 @@ async function cleanupCommunityPostsStore() {
 
 async function readCommunityPostsStore() {
   await cleanupCommunityPostsStore();
-  if (!isSupabaseEnabled()) return readCommunityPosts();
-  const rows = await supabaseRequest("community_posts?select=*&order=created_at.desc&limit=80");
+  if (!isSupabaseEnabled()) return readCommunityPosts().filter((post) => post.need === "clean");
+  const rows = await supabaseRequest("community_posts?select=*&need=eq.clean&order=created_at.desc&limit=80");
   return Array.isArray(rows) ? rows.map(dbToPost) : [];
 }
 

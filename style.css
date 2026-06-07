@@ -4938,6 +4938,159 @@ select {
   padding: 10px 12px;
 }
 
+/* Cleaner social-first Home */
+.home-phone .home-hero-card,
+.home-phone .home-farm-card,
+.home-phone .home-stats,
+.home-phone .home-summary-card {
+  opacity: 0.86;
+}
+
+.home-phone .home-hero-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  margin-top: 14px;
+}
+
+.home-phone .home-hero-card strong {
+  font-size: 22px;
+  text-align: right;
+}
+
+.home-phone .home-hero-card p {
+  grid-column: 1 / -1;
+  margin-top: 0;
+  font-size: 12px;
+}
+
+.home-social-composer {
+  position: relative;
+  overflow: hidden;
+  border-color: rgba(96, 255, 117, 0.3);
+  background:
+    linear-gradient(180deg, rgba(27, 42, 58, 0.94), rgba(11, 18, 27, 0.94)),
+    rgba(14, 22, 31, 0.94);
+}
+
+.home-social-composer::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(90deg, rgba(92, 255, 82, 0.1), transparent 42%);
+}
+
+.home-social-composer > * {
+  position: relative;
+}
+
+.composer-head img {
+  width: 54px;
+  height: 54px;
+}
+
+.home-social-composer textarea {
+  min-height: 74px;
+  border-radius: 18px;
+  background: rgba(4, 9, 15, 0.48);
+  font-size: 15px;
+}
+
+.home-feed-card {
+  padding: 0;
+  border-radius: 18px;
+  overflow: hidden;
+  background: rgba(10, 16, 24, 0.78);
+}
+
+.feed-title-row {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 14px;
+  margin: 0;
+  background: rgba(10, 16, 24, 0.94);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.home-feed-list {
+  gap: 0;
+}
+
+.home-post,
+.home-feed-empty {
+  border: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 0;
+  background: rgba(12, 20, 30, 0.55);
+}
+
+.home-post:hover {
+  background: rgba(18, 29, 42, 0.72);
+}
+
+.home-post header img {
+  width: 46px;
+  height: 46px;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.home-post p {
+  margin-left: 58px;
+  margin-top: 8px;
+  font-size: 15px;
+}
+
+.home-post-media {
+  width: calc(100% - 58px);
+  margin-left: 58px;
+  max-height: 280px;
+}
+
+.home-post-actions,
+.home-comments,
+.home-comment-form {
+  margin-left: 58px;
+}
+
+.home-post-actions {
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.home-post-actions button,
+.home-post-actions a {
+  flex: 1;
+  text-align: center;
+  font-size: 12px;
+}
+
+@media (max-width: 520px) {
+  .home-phone .home-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .home-post p,
+  .home-post-media,
+  .home-post-actions,
+  .home-comments,
+  .home-comment-form {
+    margin-left: 0;
+  }
+
+  .composer-actions {
+    flex-wrap: wrap;
+  }
+
+  .composer-actions button {
+    flex: 1;
+  }
+}
+
 .home-summary-card button,
 .home-farm-card .farm-profile-actions button {
   min-width: 94px;
